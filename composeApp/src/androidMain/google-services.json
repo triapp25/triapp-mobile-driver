@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "6967168117",
+    "project_id": "triapp-ee2e7",
+    "storage_bucket": "triapp-ee2e7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:6967168117:android:bd791bf06a648abac07c3c",
+        "android_client_info": {
+          "package_name": "com.triapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCFpkkNtULyvSiLbVzZ4iThO8vK7t_eGxo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

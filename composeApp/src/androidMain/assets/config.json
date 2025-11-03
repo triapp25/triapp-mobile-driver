@@ -1,0 +1,6 @@
+{
+  "api_base_url": "https://api.triapp.com",
+  "tenant_id": "triapp",
+  "firebase_api_key": "FIREBASE_KEY_AQUI",
+  "primary_color_hex": "#0066CC"
+}

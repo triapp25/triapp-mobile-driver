@@ -1,0 +1,140 @@
+[versions]
+agp = "8.10.0"
+firebaseCommon = "1.13.1"
+mapbox = "11.2.0"
+android-compileSdk = "36"
+android-minSdk = "24"
+android-targetSdk = "36"
+androidx-activity = "1.11.0"
+androidx-appcompat = "1.7.1"
+androidx-core = "1.17.0"
+androidx-espresso = "3.7.0"
+androidx-lifecycle = "2.9.4"
+androidx-testExt = "1.3.0"
+coilCompose = "2.7.0"
+composeMultiplatform = "1.9.0"
+composeMultiplatformFilePicker = "2.7.1"
+coreSplashscreen = "1.0.1"
+geo = "0.8.0"
+googlePlugin =  "4.4.4"
+icons =  "1.7.8"
+firebasePlugin = "3.0.6"
+
+junit = "4.13.2"
+kamelImage = "0.9.0"
+koinComposeViewmodel = "3.6.0"
+kotlin = "2.2.20"
+koin = "4.1.0"
+ktorfit = "1.12.0"
+ktor = "3.0.3"
+firebase-gitlive = "1.13.0"
+kotlinx-serialization = "1.8.1"
+
+lifecycleRuntimeCompose = "2.9.4"
+mapsCompose = "4.4.1"
+permissions = "0.16.1"
+playServicesLocation = "21.3.0"
+playServicesMaps = "19.2.0"
+sqlite = "2.6.1"
+room = "2.8.3"
+ksp = "2.2.20-1.0.22"
+multiplatform-settings = "1.2.0"
+
+compose-plugin = "1.6.0"
+firebase-bom = "34.5.0"
+firebase-crashlytics-plugin = "3.0.6"
+google-play-services = "4.4.4"
+filekit = "0.12.0"
+
+
+[libraries]
+androidx-ui-android = { module = "androidx.compose.ui:ui-android" }
+mapbox = { module = "com.mapbox.maps:android", version.ref = "mapbox" }
+androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "coreSplashscreen" }
+compose-multiplatform-file-picker = { module = "com.github.Wavesonics:compose-multiplatform-file-picker", version.ref = "composeMultiplatformFilePicker" }
+geo = { module = "dev.icerock.moko:geo", version.ref = "geo" }
+icons-extended = { module = "androidx.compose.material:material-icons-extended", version.ref = "icons" }
+coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
+firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebase-bom" }
+firebase-crashlyticsKtx = { module = "com.google.firebase:firebase-crashlytics-ktx" }
+
+google-firebase-auth = { module = "com.google.firebase:firebase-auth" }
+google-firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }
+google-firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
+kamel-image = { module = "media.kamel:kamel-image", version.ref = "kamelImage" }
+kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
+kotlin-testJunit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
+junit = { module = "junit:junit", version.ref = "junit" }
+androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidx-core" }
+androidx-testExt-junit = { module = "androidx.test.ext:junit", version.ref = "androidx-testExt" }
+androidx-espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref = "androidx-espresso" }
+androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "androidx-appcompat" }
+androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
+androidx-lifecycle-viewmodelCompose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "androidx-lifecycle" }
+androidx-lifecycle-runtimeCompose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose", version.ref = "androidx-lifecycle" }
+
+# KMP Serialization (Obrigatório para Ktorfit)
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+
+# -----------------
+# KTOR & KTORFIT
+# -----------------
+ktorfit-lib = { module = "de.jensklingenberg.ktorfit:ktorfit-lib", version.ref = "ktorfit" }
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+ktor-client-contentNegotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-serialization-kotlinxJson = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
+# Engine Ktor (Android)
+ktor-client-android = { module = "io.ktor:ktor-client-android", version.ref = "ktor" }
+# Engine Ktor (iOS)
+ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }
+
+# -----------------
+# KOIN (Injeção de Dependência)
+# -----------------
+koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
+koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin" }
+koin-compose = { module = "io.insert-koin:koin-compose", version.ref = "koin" }
+koin-compose-viewmodel = {module = "io.insert-koin:koin-compose-viewmodel", version.ref = "koin"}
+koin-compose-viewmodel-nav = {module = "io.insert-koin:koin-compose-viewmodel-navigation", version.ref = "koin"}
+
+# -----------------
+# FIREBASE KOTLIN SDK (GitLive)
+# -----------------
+firebase-auth = { module = "dev.gitlive:firebase-auth", version.ref = "firebase-gitlive" }
+firebase-crashlytics = { module = "dev.gitlive:firebase-crashlytics", version.ref = "firebase-gitlive" }
+firebase-messaging = { module = "dev.gitlive:firebase-messaging", version.ref = "firebase-gitlive" }
+firebase-common = { module = "dev.gitlive:firebase-common", version.ref = "firebase-gitlive" }
+# -----------------
+# ROOM DATABASE (KMP)
+# -----------------
+maps-compose = { module = "com.google.maps.android:maps-compose", version.ref = "mapsCompose" }
+permissions = { module = "dev.icerock.moko:permissions", version.ref = "permissions" }
+play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesLocation" }
+play-services-maps = { module = "com.google.android.gms:play-services-maps", version.ref = "playServicesMaps" }
+room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
+room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+room-sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version = "sqlite" }
+androidx-room-sqlite-wrapper = { module = "androidx.room:room-sqlite-wrapper", version.ref = "room" }
+
+# -----------------
+# MULTIPLATFORM SETTINGS
+# -----------------
+multiplatform-settings-core = { module = "com.russhwolf:multiplatform-settings", version.ref = "multiplatform-settings" }
+multiplatform-settings-no-arg = { module = "com.russhwolf:multiplatform-settings-no-arg", version.ref = "multiplatform-settings" }
+multiplatform-settings-coroutines = { module = "com.russhwolf:multiplatform-settings-coroutines", version.ref = "multiplatform-settings" }
+
+filekit-core = { module = "io.github.vinceglb:filekit-core", version.ref = "filekit" }
+filekit-dialogs-compose = { module = "io.github.vinceglb:filekit-dialogs-compose", version.ref = "filekit" }
+
+[plugins]
+androidApplication = { id = "com.android.application", version.ref = "agp" }
+androidLibrary = { id = "com.android.library", version.ref = "agp" }
+composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
+composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+
+google-services = { id = "com.google.gms.google-services", version.ref = "google-play-services" }
+firebase-crashlytics-plugin = { id = "com.google.firebase.crashlytics", version.ref = "firebase-crashlytics-plugin"}
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+androidx-room = { id = "androidx.room", version.ref = "room" }

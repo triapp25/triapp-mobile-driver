@@ -1,0 +1,27 @@
+package com.triapp.data.repository
+
+import com.triapp.data.ApiService
+import com.triapp.domain.model.ProductDomainModel
+
+interface DataRepository {
+    suspend fun fetchProducts(): List<ProductDomainModel>
+}
+
+
+class DataRepositoryImpl(
+    private val apiService: ApiService
+) : DataRepository {
+
+    override suspend fun fetchProducts(): List<ProductDomainModel> {
+        // Mapeamento de DTO para Domínio
+        return apiService.getProducts().map { productDto ->
+            ProductDomainModel(
+                id = productDto.id,
+                name = productDto.name,
+                description = productDto.description.orEmpty(),
+                formattedPrice = productDto.price.toString(),
+                imageUrl = productDto.imageUrl ?: ""
+            )
+        }
+    }
+}
