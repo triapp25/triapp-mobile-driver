@@ -4,9 +4,6 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 expect class PlatformConfigLoader {
-    /**
-     * Carrega o conteúdo do arquivo 'config.json' como uma String.
-     */
     suspend fun loadConfigJson(): String
 }
 

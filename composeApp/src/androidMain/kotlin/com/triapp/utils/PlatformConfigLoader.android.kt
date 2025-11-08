@@ -9,7 +9,6 @@ actual class PlatformConfigLoader(
     private val context: Context
 ) {
     actual suspend fun loadConfigJson(): String = withContext(Dispatchers.IO) {
-        // Assume que o arquillian se chama 'config.json' e está nos assets
         val inputStream = context.assets.open("config.json")
         return@withContext InputStreamReader(inputStream).readText()
     }

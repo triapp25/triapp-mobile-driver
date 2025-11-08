@@ -1,26 +1,24 @@
 package com.triapp.utils
 
-import platform.FirebaseCrashlytics.FIRCrashlytics
+import dev.gitlive.firebase.Firebase
+import dev.gitlive.firebase.crashlytics.crashlytics
 
 actual fun getCrashlyticsService(): CrashlyticsService = IOSCrashlyticsService()
 
 class IOSCrashlyticsService : CrashlyticsService {
     override fun recordException(throwable: Throwable) {
-        // Exemplo usando a API nativa de iOS
-        FIRCrashlytics.crashlytics().recordExceptionModel(
-            exceptionModel = throwable.asFirebaseExceptionModel() // Exige uma conversão, ou use GitLive
-        )
+        Firebase.crashlytics.recordException(throwable)
     }
 
     override fun setUserId(userId: String) {
-        TODO("Not yet implemented")
+        Firebase.crashlytics.setUserId(userId)
     }
 
     override fun setCustomKey(key: String, value: String) {
-        TODO("Not yet implemented")
+        Firebase.crashlytics.setCustomKey(key, value)
     }
 
     override fun log(message: String) {
-        TODO("Not yet implemented")
+        Firebase.crashlytics.log(message)
     }
 }

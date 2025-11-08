@@ -30,16 +30,13 @@ kotlin {
             baseName = "ComposeApp"
             isStatic = true
         }
-    }
 
-    //cocoapods {
-    //    summary = "Shared Kotlin Multiplatform module"
-    //    homepage = "https://triapp.com"
-    //    ios.deploymentTarget = "14.0"
-    //    pod("MapboxMaps") {
-    //        version = "~> 11.0.0"
-    //    }
-    //}
+        iosTarget.compilations["main"].cinterops {
+            val mapbox by creating {
+                defFile(project.file("src/iosMain/c_interop/mapbox.def"))
+            }
+        }
+    }
 
     sourceSets {
         androidMain.dependencies {
@@ -59,6 +56,9 @@ kotlin {
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
+            implementation(libs.kotlinx.coroutines.core)
+
+
         }
         commonMain.dependencies {
             implementation(compose.runtime)

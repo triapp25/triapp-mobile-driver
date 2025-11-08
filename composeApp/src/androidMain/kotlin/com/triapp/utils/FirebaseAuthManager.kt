@@ -1,6 +1,5 @@
 package com.triapp.utils
 
-import android.app.Activity
 import androidx.activity.ComponentActivity
 import com.google.firebase.FirebaseException
 import com.google.firebase.auth.FirebaseAuth

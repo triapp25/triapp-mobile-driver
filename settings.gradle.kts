@@ -10,6 +10,7 @@ pluginManagement {
                 includeGroupAndSubgroups("com.google")
             }
         }
+        google()
         mavenCentral()
         gradlePluginPortal()
     }
@@ -24,6 +25,7 @@ dependencyResolutionManagement {
                 includeGroupAndSubgroups("com.google")
             }
         }
+        google()
         mavenCentral()
         mavenLocal()
         maven("https://api.mapbox.com/downloads/v2/releases/maven") {

@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		F263C8EE2EBEF6B4007B73CB /* MapboxMaps in Frameworks */ = {isa = PBXBuildFile; productRef = F263C8ED2EBEF6B4007B73CB /* MapboxMaps */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		5405FDBCEF78CC0BEB6A85CA /* TriApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TriApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -41,6 +45,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F263C8EE2EBEF6B4007B73CB /* MapboxMaps in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -85,6 +90,7 @@
 			);
 			name = iosApp;
 			packageProductDependencies = (
+				F263C8ED2EBEF6B4007B73CB /* MapboxMaps */,
 			);
 			productName = iosApp;
 			productReference = 5405FDBCEF78CC0BEB6A85CA /* TriApp.app */;
@@ -114,6 +120,9 @@
 			);
 			mainGroup = EE997EAC2F4D3D1AE8C2E281;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				F263C8EC2EBEF6B4007B73CB /* XCRemoteSwiftPackageReference "mapbox-maps-ios" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C33E213786CB5B02A5E118E4 /* Products */;
 			projectDirPath = "";
@@ -180,6 +189,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = iosApp/Info.plist;
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Precisamos da sua localização para mostrar sua posição no mapa.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "O app precisa da sua localização para exibir o mapa.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -331,6 +342,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = iosApp/Info.plist;
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Precisamos da sua localização para mostrar sua posição no mapa.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "O app precisa da sua localização para exibir o mapa.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -368,6 +381,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		F263C8EC2EBEF6B4007B73CB /* XCRemoteSwiftPackageReference "mapbox-maps-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/mapbox/mapbox-maps-ios.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.16.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		F263C8ED2EBEF6B4007B73CB /* MapboxMaps */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F263C8EC2EBEF6B4007B73CB /* XCRemoteSwiftPackageReference "mapbox-maps-ios" */;
+			productName = MapboxMaps;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 3D08A3C0C3130D7D2BC7CE80 /* Project object */;
 }

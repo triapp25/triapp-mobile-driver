@@ -9,11 +9,16 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         FirebaseApp.configure()
 
-        UNUserNotificationCenter.current().delegate = self
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { _, _ in }
+       notificationManager.requestPermission { granted in
+                  if granted {
+                      DispatchQueue.main.async {
+                          UIApplication.shared.registerForRemoteNotifications()
+                      }
+                  }
+              }
 
-        application.registerForRemoteNotifications()
-        Messaging.messaging().delegate = self
+              UNUserNotificationCenter.current().delegate = self
+
         return true
     }
 
@@ -24,11 +29,26 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
 
     // Recebendo notificação enquanto o app está em primeiro plano
     func userNotificationCenter(_ center: UNUserNotificationCenter,
-                                willPresent notification: UNNotification,
-                                withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-        completionHandler([.alert, .badge, .sound])
+                                   willPresent notification: UNNotification,
+                                   withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
 
-        // Aqui você pode chamar uma função Kotlin via bridge para salvar no Room
-        // ex: NotificationBridge.shared.save(notification)
-    }
+            let content = notification.request.content
+            let title = content.title
+            let body = content.body
+
+            // Aqui você pode salvar no banco local, se quiser (Room não existe no iOS, use CoreData ou Realm)
+            // Chame o NotificationManager para exibir a notificação localmente, se desejar
+
+            notificationManager.showNotification(title: title, message: body)
+
+            completionHandler([.banner, .sound])
+        }
+
+        // Recebe notificações quando o usuário interage com elas
+        func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                   didReceive response: UNNotificationResponse,
+                                   withCompletionHandler completionHandler: @escaping () -> Void) {
+            // Trate a ação do usuário aqui, se necessário
+            completionHandler()
+        }
 }

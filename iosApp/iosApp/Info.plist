@@ -4,7 +4,7 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
-	<key>NSLocationWhenInUseUsageDescription</key>
-    <string>O app precisa da sua localização para exibir o mapa.</string>
+	<key>MBXAccessToken</key>
+	<string>pk.eyJ1Ijoia3Nkcm9mNTAwIiwiYSI6ImNtaGd4aWUxYzBrdTYyanE2NDZ3a21qcm8ifQ.26WRX_w_Xj7CoYoHVn35Ng</string>
 </dict>
 </plist>
