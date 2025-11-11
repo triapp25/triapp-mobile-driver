@@ -20,6 +20,8 @@ import com.triapp.presentation.feature.home.MapController
 import com.triapp.presentation.feature.login.LoginViewModel
 import com.triapp.presentation.feature.signup.SignupViewModel
 import com.triapp.utils.FirebaseAuthManager
+import com.triapp.utils.FirebaseServiceImpl
+import com.triapp.utils.LocationProvider
 import com.triapp.utils.LocationRepository
 import com.triapp.utils.TenantConfig
 import com.triapp.utils.TenantService
@@ -35,7 +37,9 @@ import dev.gitlive.firebase.auth.auth
 import io.ktor.client.engine.HttpClientEngineFactory
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.header
+import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel
+import org.koin.dsl.bind
 
 expect fun getPlatformHttpClientEngineFactory(): HttpClientEngineFactory<*>
 
@@ -94,6 +98,7 @@ val networkModule = module {
 val authModule = module {
     // Fornece a instância do SDK do Firebase Auth (GitLive)
     single { Firebase.auth }
+    singleOf(::FirebaseServiceImpl).bind<FirebaseAuthManager>()
 
 }
 
@@ -101,6 +106,7 @@ val repositoryModule = module {
     single<DataRepository> { DataRepositoryImpl(get()) }
     single<MapController> { DefaultMapController() }
     single { LocationRepository(get()) }
+    single<LocationProvider> { LocationProvider() }
 
 }
 

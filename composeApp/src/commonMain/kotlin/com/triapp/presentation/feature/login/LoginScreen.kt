@@ -1,6 +1,13 @@
 package com.triapp.presentation.feature.login
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Numbers
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -12,7 +19,7 @@ import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LoginScreen(activity: Any, onNavigate: () -> Unit) {
+fun LoginScreen(activity: Any?, onNavigate: () -> Unit) {
     val viewModel = koinViewModel<LoginViewModel>()
     val uiState by viewModel.state.collectAsState()
 
@@ -62,12 +69,12 @@ fun LoginScreen(activity: Any, onNavigate: () -> Unit) {
 }
 
 @Composable
-fun LoginContent(state: LoginDomainModel, activity: Any, onAction: (LoginIntent) -> Unit) {
+fun LoginContent(state: LoginDomainModel, activity: Any?, onAction: (LoginIntent) -> Unit) {
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        //Icon(Icons.Default.Place, contentDescription = null, modifier = Modifier.size(64.dp))
+        Icon(Icons.Default.Place, contentDescription = null, modifier = Modifier.size(64.dp))
         Spacer(Modifier.height(16.dp))
         Text("Ride", style = MaterialTheme.typography.headlineSmall)
         Text("Urban mobility reimagined", style = MaterialTheme.typography.bodyMedium)
@@ -78,7 +85,7 @@ fun LoginContent(state: LoginDomainModel, activity: Any, onAction: (LoginIntent)
             onValueChange = { onAction(LoginIntent.EnterPhone(it)) },
             label = { Text("Phone number") },
             modifier = Modifier.fillMaxWidth(),
-            //leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
+            leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
         )
 
         Spacer(Modifier.height(24.dp))
@@ -110,7 +117,7 @@ fun ForgotPasswordModal(onAction: (LoginIntent) -> Unit) {
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        //Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(48.dp))
+        Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(48.dp))
         Text("Forgot password?", style = MaterialTheme.typography.headlineSmall)
         Text("No worries, we'll send you reset instructions")
         Spacer(Modifier.height(16.dp))
@@ -124,8 +131,8 @@ fun ForgotPasswordModal(onAction: (LoginIntent) -> Unit) {
                 onAction(LoginIntent.EnterEmail(it))
             },
             label = { Text("Enter your email") },
-            modifier = Modifier.fillMaxWidth()
-            //  leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
+            modifier = Modifier.fillMaxWidth(),
+            leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
         )
 
         Spacer(Modifier.height(24.dp))
@@ -145,7 +152,7 @@ fun ResetCodeContent(state: LoginDomainModel, onAction: (LoginIntent) -> Unit) {
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        //  Icon(Icons.Default.VpnKey, contentDescription = null, modifier = Modifier.size(64.dp))
+        Icon(Icons.Default.VpnKey, contentDescription = null, modifier = Modifier.size(64.dp))
         Spacer(Modifier.height(16.dp))
         Text("Enter Reset Code", style = MaterialTheme.typography.headlineSmall)
         Spacer(Modifier.height(8.dp))
@@ -156,8 +163,8 @@ fun ResetCodeContent(state: LoginDomainModel, onAction: (LoginIntent) -> Unit) {
             value = state.resetCode,
             onValueChange = { onAction(LoginIntent.EnterResetCode(it)) },
             label = { Text("Verification code") },
-            modifier = Modifier.fillMaxWidth()
-            //  leadingIcon = { Icon(Icons.Default.Numbers, contentDescription = null) },
+            modifier = Modifier.fillMaxWidth(),
+            leadingIcon = { Icon(Icons.Default.Numbers, contentDescription = null) },
         )
 
         Spacer(Modifier.height(24.dp))

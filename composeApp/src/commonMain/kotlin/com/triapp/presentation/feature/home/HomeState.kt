@@ -1,11 +1,10 @@
 package com.triapp.presentation.feature.home
 
-import androidx.compose.runtime.Immutable
+import com.triapp.domain.model.Coordinate
 import com.triapp.domain.model.LatLng
 import com.triapp.domain.model.RideOption
 import com.triapp.presentation.SideEffect
 import com.triapp.presentation.ViewIntent
-import com.triapp.utils.Coordinate
 import com.triapp.utils.PlatformMap
 
 sealed class HomeIntent : ViewIntent<Nothing> {

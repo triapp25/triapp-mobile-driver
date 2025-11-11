@@ -8,7 +8,7 @@ sealed class LoginIntent : ViewIntent<Nothing> {
     data class EnterPhone(val phone: String) : LoginIntent()
     data class EnterPassword(val password: String) : LoginIntent()
     data class EnterResetCode(val code: String) : LoginIntent()
-    data class SubmitLogin(val activity: Any) : LoginIntent()
+    data class SubmitLogin(val activity: Any?) : LoginIntent()
 
     object ForgotPassword : LoginIntent()
     object SendResetCode : LoginIntent()

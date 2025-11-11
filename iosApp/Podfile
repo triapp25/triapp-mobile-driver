@@ -1,0 +1,18 @@
+platform :ios, '16.0'
+
+use_frameworks!
+use_modular_headers!
+
+target 'iosApp' do
+  # Caminho relativo ao módulo compartilhado
+  pod 'composeApp', :path => '../composeApp'
+
+  # Firebase iOS SDK
+  pod 'Firebase/Core'
+  pod 'Firebase/Auth'
+  pod 'Firebase/Messaging'
+  pod 'Firebase/Crashlytics'
+end
+
+# Garantir que CocoaPods use a versão correta
+install! 'cocoapods', :warn_for_unused_master_specs_repo => false

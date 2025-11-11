@@ -10,7 +10,7 @@ import com.google.android.gms.location.LocationServices
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
-actual class LocationProvider(private val context: Context) {
+actual class LocationProvider {
 
     actual suspend fun requestLocationPermission(): Boolean = suspendCancellableCoroutine { cont ->
         val activity = currentActivityRef?.get()
@@ -22,7 +22,7 @@ actual class LocationProvider(private val context: Context) {
 
         // 1. Verificar se a permissão já foi concedida
         val permission = Manifest.permission.ACCESS_FINE_LOCATION // Usamos FINE como primário
-        if (ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(activity, permission) == PackageManager.PERMISSION_GRANTED) {
             cont.resume(true)
             return@suspendCancellableCoroutine
         }
@@ -46,8 +46,9 @@ actual class LocationProvider(private val context: Context) {
     }
 
     actual suspend fun getCurrentLocation(): Pair<Double, Double>? {
-        val fine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
-        val coarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION)
+        val activity = currentActivityRef?.get()
+        val fine = activity?.baseContext?.let { ContextCompat.checkSelfPermission(it, Manifest.permission.ACCESS_FINE_LOCATION) }
+        val coarse = activity?.baseContext?.let { ContextCompat.checkSelfPermission(it, Manifest.permission.ACCESS_COARSE_LOCATION) }
 
         // Verificação de permissão agora só garante que podemos prosseguir
         if (fine != PackageManager.PERMISSION_GRANTED && coarse != PackageManager.PERMISSION_GRANTED) {
@@ -55,16 +56,16 @@ actual class LocationProvider(private val context: Context) {
             return null
         }
 
-        val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+        val fusedLocationClient = activity.baseContext?.let { LocationServices.getFusedLocationProviderClient(it) }
 
         return suspendCancellableCoroutine { cont ->
-            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+            fusedLocationClient?.lastLocation?.addOnSuccessListener { location ->
                 if (location != null) {
                     cont.resume(Pair(location.latitude, location.longitude))
                 } else {
                     cont.resume(null)
                 }
-            }.addOnFailureListener {
+            }?.addOnFailureListener {
                 cont.resume(null)
             }
         }

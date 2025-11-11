@@ -1,6 +1,6 @@
 package com.triapp.utils
 
-data class Coordinate(val lat: Double, val lng: Double)
+import com.triapp.domain.model.Coordinate
 
 interface PlatformMap {
     fun moveCamera(coordinate: Coordinate, zoom: Double)

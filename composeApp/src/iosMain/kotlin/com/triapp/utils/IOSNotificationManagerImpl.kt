@@ -6,16 +6,16 @@ import kotlin.coroutines.resume
 
 class IOSNotificationManagerImpl : NotificationManager {
 
-    private val iosManager = IosNotificationManager()
+    //private val iosManager = IosNotificationManager()
 
-    override suspend fun requestPermission(): Boolean =
-        suspendCancellableCoroutine { continuation ->
-            iosManager.requestPermission { granted ->
-                continuation.resume(granted)
-            }
-        }
+    override suspend fun requestPermission(): Boolean = true
+        // suspendCancellableCoroutine { continuation ->
+          // iosManager.requestPermission { granted ->
+          //     continuation.resume(granted)
+          // }
+        //}
 
     override fun showNotification(title: String, message: String) {
-        iosManager.showNotificationWithTitle(title, message)
+        // iosManager.showNotificationWithTitle(title, message)
     }
 }

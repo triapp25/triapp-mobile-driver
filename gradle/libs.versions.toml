@@ -1,6 +1,8 @@
 [versions]
 agp = "8.10.0"
+androidNdk27 = "11.15.2"
 firebaseCommon = "1.13.1"
+geoCompose = "0.8.0"
 kotlinxCoroutinesCore = "1.9.0"
 mapbox = "11.2.0"
 android-compileSdk = "36"
@@ -34,7 +36,11 @@ kotlinx-serialization = "1.9.0"
 lifecycleRuntimeCompose = "2.9.4"
 mapboxMapsIos = "11.4.0"
 mapsCompose = "4.4.1"
+mapsComposeNdk27 = "11.15.2"
 permissions = "0.16.1"
+permissionsCompose = "0.20.1"
+permissionsLocation = "0.20.1"
+permissionsVersion = "0.20.1"
 playServicesLocation = "21.3.0"
 playServicesMaps = "19.2.0"
 sqlite = "2.6.1"
@@ -50,7 +56,9 @@ filekit = "0.12.0"
 
 
 [libraries]
+android-ndk27 = { module = "com.mapbox.maps:android-ndk27", version.ref = "androidNdk27" }
 androidx-ui-android = { module = "androidx.compose.ui:ui-android" }
+geo-compose = { module = "dev.icerock.moko:geo-compose", version.ref = "geoCompose" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutinesCore" }
 mapbox = { module = "com.mapbox.maps:android", version.ref = "mapbox" }
 androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "coreSplashscreen" }
@@ -60,10 +68,6 @@ icons-extended = { module = "androidx.compose.material:material-icons-extended",
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebase-bom" }
 firebase-crashlyticsKtx = { module = "com.google.firebase:firebase-crashlytics-ktx" }
-
-google-firebase-auth = { module = "com.google.firebase:firebase-auth" }
-google-firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }
-google-firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
 kamel-image = { module = "media.kamel:kamel-image", version.ref = "kamelImage" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlin-testJunit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
@@ -103,6 +107,10 @@ koin-compose-viewmodel-nav = {module = "io.insert-koin:koin-compose-viewmodel-na
 # -----------------
 # FIREBASE KOTLIN SDK (GitLive)
 # -----------------
+google-firebase-auth = { module = "com.google.firebase:firebase-auth-ktx", version = "23.1.0" }
+google-firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics-ktx", version = "19.2.0" }
+google-firebase-messaging = { module = "com.google.firebase:firebase-messaging-ktx", version = "24.0.1" }
+
 firebase-auth = { module = "dev.gitlive:firebase-auth", version.ref = "firebase-gitlive" }
 firebase-crashlytics = { module = "dev.gitlive:firebase-crashlytics", version.ref = "firebase-gitlive" }
 firebase-messaging = { module = "dev.gitlive:firebase-messaging", version.ref = "firebase-gitlive" }
@@ -112,7 +120,11 @@ firebase-common = { module = "dev.gitlive:firebase-common", version.ref = "fireb
 # -----------------
 mapbox-maps-ios = { module = "com.mapbox.maps:mapbox-maps-ios", version.ref = "mapboxMapsIos" }
 maps-compose = { module = "com.google.maps.android:maps-compose", version.ref = "mapsCompose" }
+maps-compose-ndk27 = { module = "com.mapbox.extension:maps-compose-ndk27", version.ref = "mapsComposeNdk27" }
 permissions = { module = "dev.icerock.moko:permissions", version.ref = "permissions" }
+permissions-compose = { module = "dev.icerock.moko:permissions-compose", version.ref = "permissionsCompose" }
+permissions-location = { module = "dev.icerock.moko:permissions-location", version.ref = "permissionsLocation" }
+permissions-v0201 = { module = "dev.icerock.moko:permissions", version.ref = "permissionsVersion" }
 play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesLocation" }
 play-services-maps = { module = "com.google.android.gms:play-services-maps", version.ref = "playServicesMaps" }
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
@@ -137,6 +149,7 @@ composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMul
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+kotlinNativeCocoapods = { id = "org.jetbrains.kotlin.native.cocoapods", version.ref = "kotlin" }
 
 google-services = { id = "com.google.gms.google-services", version.ref = "google-play-services" }
 firebase-crashlytics-plugin = { id = "com.google.firebase.crashlytics", version.ref = "firebase-crashlytics-plugin"}

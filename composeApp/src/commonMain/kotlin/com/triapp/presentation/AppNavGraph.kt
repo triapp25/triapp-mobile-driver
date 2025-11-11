@@ -12,7 +12,7 @@ import com.triapp.presentation.feature.login.LoginScreen
 import com.triapp.presentation.feature.signup.SignupScreen
 
 @Composable
-fun AppNavigationHost(modifier: Modifier = Modifier, activity: Any) {
+fun AppNavigationHost(modifier: Modifier = Modifier, activity: Any?) {
     val navController = rememberNavController()
     AppNavGraph(navController = navController, activity = activity, modifier = modifier)
 }
@@ -20,14 +20,14 @@ fun AppNavigationHost(modifier: Modifier = Modifier, activity: Any) {
 @Composable
 fun AppNavGraph(
     navController: NavHostController,
-    activity: Any,
+    activity: Any?,
     modifier: Modifier = Modifier
 ) {
     val navigator = AppNavigator(navController)
 
     NavHost(
         navController = navController,
-        startDestination = NavRoutes.LOGIN,
+        startDestination = NavRoutes.HOME,
         modifier = modifier
     ) {
         composable(

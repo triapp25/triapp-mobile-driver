@@ -9,6 +9,7 @@ plugins {
     alias(libs.plugins.google.services)
     alias(libs.plugins.firebase.crashlytics.plugin)
     alias(libs.plugins.kotlinSerialization)
+    id("org.jetbrains.kotlin.native.cocoapods")
 }
 
 room {
@@ -22,19 +23,30 @@ kotlin {
         }
     }
 
-    listOf(
-        iosArm64(),
-        iosSimulatorArm64()
-    ).forEach { iosTarget ->
-        iosTarget.binaries.framework {
+    iosX64()
+    iosArm64()
+    iosSimulatorArm64()
+
+    cocoapods {
+        version = "1.0.0"
+
+        summary = "Shared module for TriApp"
+        homepage = "https://github.com/yourorg/TriApp"
+        ios.deploymentTarget = "16.0"
+
+        framework {
             baseName = "ComposeApp"
             isStatic = true
         }
 
-        iosTarget.compilations["main"].cinterops {
-            val mapbox by creating {
-                defFile(project.file("src/iosMain/c_interop/mapbox.def"))
-            }
+        pod("FirebaseCore") {
+            version = "~> 12.0.0"
+            extraOpts += listOf("-compiler-option", "-fmodules")
+        }
+
+        pod("FirebaseAuth") {
+            version = "~> 12.0.0"
+            extraOpts += listOf("-compiler-option", "-fmodules")
         }
     }
 
@@ -50,8 +62,9 @@ kotlin {
             implementation(libs.androidx.room.sqlite.wrapper)
             implementation(libs.androidx.core.splashscreen)
             implementation(libs.play.services.location)
-            implementation(libs.mapbox)
             implementation(libs.multiplatform.settings.coroutines)
+            implementation(libs.android.ndk27)
+            implementation(libs.maps.compose.ndk27)
 
         }
         iosMain.dependencies {
@@ -94,8 +107,20 @@ kotlin {
             implementation(libs.multiplatform.settings.no.arg)
             implementation(libs.multiplatform.settings.coroutines)
 
+
+            implementation(libs.permissions.location)
+            implementation(libs.permissions.v0201)
+            implementation(libs.permissions.compose)
+            implementation(libs.geo)
+            implementation(libs.geo.compose)
+            implementation(compose.materialIconsExtended)
+
+
+
+
             implementation(libs.permissions)
             implementation(libs.geo)
+
 
         }
         commonTest.dependencies {
@@ -139,4 +164,3 @@ android {
 dependencies {
     debugImplementation(compose.uiTooling)
 }
-

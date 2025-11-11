@@ -10,6 +10,9 @@ pluginManagement {
                 includeGroupAndSubgroups("com.google")
             }
         }
+        maven {
+            url = uri("https://api.mapbox.com/downloads/v2/releases/maven")
+        }
         google()
         mavenCentral()
         gradlePluginPortal()
@@ -28,6 +31,9 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
         mavenLocal()
+        maven {
+            url = uri("https://api.mapbox.com/downloads/v2/releases/maven")
+        }
         maven("https://api.mapbox.com/downloads/v2/releases/maven") {
             authentication {
                 create<BasicAuthentication>("basic")

@@ -25,6 +25,20 @@ in your IDE’s toolbar or build it directly from the terminal:
   .\gradlew.bat :composeApp:assembleDebug
   ```
 
+- Generated code to IOS macOS/Linux
+  ```shell
+  ./gradlew clean
+  ./gradlew :composeApp:podspec
+  ./gradlew :composeApp:generateDummyFramework
+  cd iosApp
+  pod deintegrate
+  pod install --repo-update
+  cd ..
+  ./gradlew :composeApp:podInstallSyntheticIos --info
+  cd iosApp
+  open iosApp.xcworkspace
+  ```
+
 ### Build and Run iOS Application
 
 To build and run the development version of the iOS app, use the run configuration from the run widget

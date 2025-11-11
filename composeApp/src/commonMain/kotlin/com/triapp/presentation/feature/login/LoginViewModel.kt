@@ -33,11 +33,11 @@ class LoginViewModel(
     }
 
 
-    private fun requestPhoneCode(activity: Any) {
+    private fun requestPhoneCode(activity: Any?) {
         viewModelScope.launch {
             updateState { it.copy(isLoading = true) }
 
-            val result = firebaseManager.requestPhoneCode(state.value.phone, activity = activity)
+            val result = firebaseManager.requestPhoneCode(state.value.phone, activity)
 
             if (result.isSuccess) {
                 phoneVerificationId = result.getOrNull()

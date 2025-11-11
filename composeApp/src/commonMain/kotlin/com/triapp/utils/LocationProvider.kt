@@ -12,7 +12,8 @@ class LocationRepository(
     }
 }
 
-expect class LocationProvider {
+
+expect class LocationProvider() {
     suspend fun getCurrentLocation(): Pair<Double, Double>?
     suspend fun requestLocationPermission(): Boolean
 }

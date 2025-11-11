@@ -4,13 +4,12 @@ import android.content.Context
 import androidx.room.Room
 import androidx.room.RoomDatabaseConstructor
 
-actual class AppDatabaseConstructor(
-    private val context: Context
-) : RoomDatabaseConstructor<AppDatabase> {
+lateinit var appContext: Context
 
+actual object AppDatabaseConstructor : RoomDatabaseConstructor<AppDatabase> {
     actual override fun initialize(): AppDatabase {
         return Room.databaseBuilder(
-            context,
+            appContext,
             AppDatabase::class.java,
             "multi_tenant_app.db"
         ).build()

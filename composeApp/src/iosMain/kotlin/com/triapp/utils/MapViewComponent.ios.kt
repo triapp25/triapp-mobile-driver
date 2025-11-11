@@ -1,0 +1,21 @@
+package com.triapp.utils
+
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.viewinterop.UIKitViewController
+import com.triapp.domain.model.Coordinate
+
+@Composable
+actual fun MapViewComponent(
+    modifier: Modifier,
+    coordinate: Coordinate
+) {
+    UIKitViewController(
+        factory = mapboxViewController,
+        modifier = modifier.fillMaxSize(),
+        update = { controller ->
+            (controller as? MapboxViewController)?.onUpdateLocation(coordinate)
+        },
+    )
+}

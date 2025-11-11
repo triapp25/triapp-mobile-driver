@@ -4,7 +4,10 @@ import ComposeApp
 
 struct ComposeView: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
-        MainViewControllerKt.MainViewController()
+        
+        return MainViewControllerKt.MainViewController(
+            mapViewController: { MapboxViewControllerImpl() }
+        )
     }
 
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}

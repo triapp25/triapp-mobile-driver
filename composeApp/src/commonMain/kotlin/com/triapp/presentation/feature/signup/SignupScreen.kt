@@ -1,6 +1,8 @@
 package com.triapp.presentation.feature.signup
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -185,11 +187,11 @@ private fun AllSetScreen(state: SignUpDomainModel, onAction: (SignupIntent) -> U
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Icon(
-        //     Icons.Default.CheckCircle,
-        //     contentDescription = null,
-        //     tint = MaterialTheme.colorScheme.primary
-        // )
+        Icon(
+            Icons.Default.CheckCircle,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary
+        )
         Spacer(Modifier.height(16.dp))
         Text("All set!", style = MaterialTheme.typography.headlineSmall)
         Text("Your account has been created successfully")

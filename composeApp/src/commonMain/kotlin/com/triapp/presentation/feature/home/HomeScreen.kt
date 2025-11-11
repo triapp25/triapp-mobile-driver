@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
@@ -17,22 +19,25 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.triapp.domain.model.HomeDomainModel
+import com.triapp.domain.model.PermissionRequest
 import com.triapp.domain.model.RideOption
-import com.triapp.utils.Coordinate
-import com.triapp.utils.NativeMap
-import com.triapp.utils.PlatformMap
+import com.triapp.utils.GeoLocationTracker
+import com.triapp.utils.MapViewComponent
+import com.triapp.utils.PermissionsRequester
+import com.triapp.utils.getLocationTracker
+import dev.icerock.moko.geo.compose.BindLocationTrackerEffect
+import dev.icerock.moko.permissions.Permission
+import dev.icerock.moko.permissions.location.LOCATION
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
-
 
 @Composable
 fun HomeScreen() {
@@ -40,17 +45,45 @@ fun HomeScreen() {
     val viewModel = koinViewModel<HomeViewModel>()
     val state by viewModel.state.collectAsState()
 
-    var platformMap: PlatformMap? by remember { mutableStateOf(null) }
-
     Box(Modifier.fillMaxSize()) {
-        NativeMap(
-            modifier = Modifier.fillMaxSize(),
-            onMapReady = { map ->
-                mapController.attachMap(map)
-                map.moveCamera(Coordinate(40.4168, -3.7038), 13.0)
-            },
-            mapController = mapController
-        )
+
+        PermissionsRequester(
+            permissions = listOf(
+                PermissionRequest(
+                    permission = Permission.LOCATION,
+                    title = "Location",
+                    description = "To show user location",
+                    icon = Icons.Default.LocationOn
+                )
+            ),
+            onAllPermissionsGranted = {
+                println("All permissions granted!")
+            }
+        ) { controller ->
+            val locationTracker = remember(controller) {
+                getLocationTracker(controller)
+            }
+            BindLocationTrackerEffect(locationTracker = locationTracker)
+            val tracker = remember(locationTracker) {
+                GeoLocationTracker(locationTracker)
+            }
+            LaunchedEffect(Unit) {
+                println("Starting location tracking...")
+                tracker.startTracking()
+            }
+
+            DisposableEffect(Unit) {
+                onDispose {
+                    println("Stopping location tracking...")
+                    tracker.stopTracking()
+                }
+            }
+            val coordinate by tracker.coordinate.collectAsState()
+            MapViewComponent(
+                coordinate = coordinate
+            )
+
+        }
 
         Column(Modifier.matchParentSize()) {
 
@@ -157,6 +190,10 @@ fun InProgressView(state: HomeDomainModel, send: (HomeIntent) -> Unit) {
         Spacer(Modifier.height(8.dp))
         Text("Driver: ${ride.driver.name} • ${ride.driver.car}")
         Spacer(Modifier.height(12.dp))
-        Row { Button(onClick = { send(HomeIntent.SimulateArrival) }) { Text("Simulate arrival") }; Spacer(Modifier.width(8.dp)); OutlinedButton(onClick = { send(HomeIntent.CancelRide) }) { Text("Cancel") } }
+        Row {
+            Button(onClick = { send(HomeIntent.SimulateArrival) }) { Text("Simulate arrival") }; Spacer(
+            Modifier.width(8.dp)
+        ); OutlinedButton(onClick = { send(HomeIntent.CancelRide) }) { Text("Cancel") }
+        }
     }
 }

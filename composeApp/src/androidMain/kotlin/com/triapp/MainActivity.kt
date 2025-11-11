@@ -20,7 +20,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         registerCurrentActivity(this)
-        MapboxOptions.accessToken = "sk.eyJ1Ijoia3Nkcm9mNTAwIiwiYSI6ImNtaGd5ZHhtMjBrb24ycnB5Z3hmaDQxaGMifQ.rg9-3efU32R3dCv-ahAPJw"
 
         super.onCreate(savedInstanceState)
         var isChecking = true
@@ -46,7 +45,7 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            AppNavigationHost(activity = this@MainActivity)
+            App(this@MainActivity)
         }
     }
 }
