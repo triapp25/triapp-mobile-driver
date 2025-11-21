@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.plugin.mpp.apple.XCFramework
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -23,13 +24,8 @@ kotlin {
         }
     }
 
-    iosX64()
-    iosArm64()
-    iosSimulatorArm64()
-
     cocoapods {
         version = "1.0.0"
-
         summary = "Shared module for TriApp"
         homepage = "https://github.com/yourorg/TriApp"
         ios.deploymentTarget = "16.0"
@@ -49,6 +45,18 @@ kotlin {
             extraOpts += listOf("-compiler-option", "-fmodules")
         }
     }
+
+    listOf(
+        iosX64(),
+        iosArm64(),
+        iosSimulatorArm64()
+    ).forEach { iosTarget ->
+        iosTarget.binaries.framework {
+            baseName = "ComposeApp"
+            isStatic = true
+        }
+    }
+
 
     sourceSets {
         androidMain.dependencies {

@@ -1,10 +1,8 @@
 platform :ios, '16.0'
 
-use_frameworks!
-use_modular_headers!
+use_frameworks! :linkage => :static
 
 target 'iosApp' do
-  # Caminho relativo ao módulo compartilhado
   pod 'composeApp', :path => '../composeApp'
 
   # Firebase iOS SDK

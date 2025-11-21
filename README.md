@@ -24,6 +24,9 @@ in your IDE’s toolbar or build it directly from the terminal:
   ```shell
   .\gradlew.bat :composeApp:assembleDebug
   ```
+- Check and validated code to IOS macOS/Linux
+  ```shell
+  ./gradlew :composeApp:assembleDebugIosSimulatorFatFrameworkForComposeAppXCFramework
 
 - Generated code to IOS macOS/Linux
   ```shell
@@ -32,7 +35,7 @@ in your IDE’s toolbar or build it directly from the terminal:
   ./gradlew :composeApp:generateDummyFramework
   cd iosApp
   pod deintegrate
-  pod install --repo-update
+  pod install
   cd ..
   ./gradlew :composeApp:podInstallSyntheticIos --info
   cd iosApp

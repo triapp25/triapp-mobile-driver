@@ -5,8 +5,6 @@
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>MBXAccessToken</key>
-	<string>pk.eyJ1Ijoia3Nkcm9mNTAwIiwiYSI6ImNtaGd4aWUxYzBrdTYyanE2NDZ3a21qcm8ifQ.26WRX_w_Xj7CoYoHVn35Ng</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-    <string>Precisamos da sua localização para mostrar o mapa</string>
+	<string>sk.eyJ1Ijoia3Nkcm9mNTAwIiwiYSI6ImNtaGd5ZHhtMjBrb24ycnB5Z3hmaDQxaGMifQ.rg9-3efU32R3dCv-ahAPJw</string>
 </dict>
 </plist>
