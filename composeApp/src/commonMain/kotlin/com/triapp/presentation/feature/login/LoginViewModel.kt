@@ -18,16 +18,16 @@ class LoginViewModel(
     override fun processIntent(intent: LoginIntent) {
         when (intent) {
             is LoginIntent.EnterEmail -> updateState { it.copy(email = intent.email) }
-            is LoginIntent.EnterPhone -> updateState { it.copy(phone = intent.phone) }
-            is LoginIntent.EnterPassword -> updateState { it.copy(password = intent.password) }
-            is LoginIntent.EnterResetCode -> updateState { it.copy(resetCode = intent.code) }
+            is LoginIntent.SubmitPhone -> updateState { it.copy(phone = intent.phone) }
+            is LoginIntent.RequestPasswordReset -> updateState { it.copy(password = intent.password) }
+            is LoginIntent.VerifyCode -> updateState { it.copy(resetCode = intent.code) }
             is LoginIntent.SubmitLogin -> requestPhoneCode(intent.activity)
-            LoginIntent.ForgotPassword -> sendEffect(LoginEffect.ShowForgotPassword)
+            LoginIntent.OpenForgotPassword -> sendEffect(LoginEffect.ShowForgotPassword)
             LoginIntent.DismissForgotPassword -> sendEffect(LoginEffect.HideForgotPassword)
             LoginIntent.SendResetCode -> sendResetCode()
             LoginIntent.VerifyResetCode -> verifyCode()
             LoginIntent.BackToLogin -> backToLogin()
-            LoginIntent.GoToSignup -> { sendEffect(LoginEffect.NavigateToSignup) }
+            LoginIntent.NavigateToSignup -> { sendEffect(LoginEffect.NavigateToSignup) }
 
         }
     }

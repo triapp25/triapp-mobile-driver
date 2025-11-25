@@ -3,6 +3,7 @@ package com.triapp.domain.model
 import androidx.compose.runtime.Immutable
 import com.triapp.presentation.ViewState
 import com.triapp.presentation.feature.home.HomeStep
+import kotlinx.serialization.Serializable
 
 @Immutable
 data class HomeDomainModel(
@@ -42,4 +43,5 @@ data class RideInfo(
 
 
 @Immutable
+@Serializable
 data class LatLng(val lat: Double, val lng: Double)

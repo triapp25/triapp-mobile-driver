@@ -11,6 +11,7 @@ Pod::Spec.new do |spec|
     spec.ios.deployment_target    = '16.0'
     spec.dependency 'FirebaseAuth', '~> 12.0.0'
     spec.dependency 'FirebaseCore', '~> 12.0.0'
+    spec.dependency 'FirebaseFirestore', '~> 12.0.0'
                 
     if !Dir.exist?('build/cocoapods/framework/ComposeApp.framework') || Dir.empty?('build/cocoapods/framework/ComposeApp.framework')
         raise "

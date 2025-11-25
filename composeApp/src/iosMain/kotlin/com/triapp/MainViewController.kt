@@ -8,11 +8,7 @@ import platform.UIKit.UIViewController
 
 fun MainViewController(mapViewController: () -> UIViewController) = ComposeUIViewController(
     configure = {
-        startKoin {
-            modules(appModule)
-        }
         mapboxViewController = mapViewController
-
     }
 ) {
     App(activity = mapboxViewController?.invoke())

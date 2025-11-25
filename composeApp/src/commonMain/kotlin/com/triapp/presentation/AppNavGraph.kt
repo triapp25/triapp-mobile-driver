@@ -8,7 +8,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navDeepLink
 import com.triapp.presentation.feature.home.HomeScreen
+import com.triapp.presentation.feature.home.HomeScreenTwo
 import com.triapp.presentation.feature.login.LoginScreen
+import com.triapp.presentation.feature.profile.ProfileFlow
+import com.triapp.presentation.feature.rating.TripRatingScreen
+import com.triapp.presentation.feature.signup.SignupFlowScreen
 import com.triapp.presentation.feature.signup.SignupScreen
 
 @Composable
@@ -27,14 +31,14 @@ fun AppNavGraph(
 
     NavHost(
         navController = navController,
-        startDestination = NavRoutes.HOME,
+        startDestination = NavRoutes.LOGIN,
         modifier = modifier
     ) {
         composable(
             route = NavRoutes.LOGIN,
             deepLinks = listOf(navDeepLink { uriPattern = "triapp://login" })
         ) {
-            LoginScreen(activity) {
+            LoginScreen() {
                 navigator.toSignup()
             }
         }
@@ -43,7 +47,7 @@ fun AppNavGraph(
             route = NavRoutes.SIGNUP,
             deepLinks = listOf(navDeepLink { uriPattern = "triapp://signup" })
         ) {
-            SignupScreen(
+            SignupFlowScreen(
                 {
                     navigator.toHome()
                 }
@@ -54,7 +58,24 @@ fun AppNavGraph(
             route = NavRoutes.HOME,
             deepLinks = listOf(navDeepLink { uriPattern = "triapp://home" })
         ) {
-            HomeScreen()
+            HomeScreenTwo(){
+                navigator.toRating()
+            }
+        }
+    composable(
+            route = NavRoutes.PROFILE,
+            deepLinks = listOf(navDeepLink { uriPattern = "triapp://profile" })
+        ) {
+        ProfileFlow()
+        }
+
+        composable(
+            route = NavRoutes.RATING,
+            deepLinks = listOf(navDeepLink { uriPattern = "triapp://rating" })
+        ) {
+            TripRatingScreen() {
+                navigator.toHome()
+            }
         }
     }
 }

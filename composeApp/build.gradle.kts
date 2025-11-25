@@ -44,6 +44,11 @@ kotlin {
             version = "~> 12.0.0"
             extraOpts += listOf("-compiler-option", "-fmodules")
         }
+
+        pod("FirebaseFirestore") {
+            version = "~> 12.0.0"
+            extraOpts += listOf("-compiler-option", "-fmodules")
+        }
     }
 
     listOf(
@@ -107,6 +112,7 @@ kotlin {
             implementation(libs.firebase.auth)
             implementation(libs.firebase.crashlytics)
             implementation(libs.firebase.messaging)
+            implementation(libs.firebase.firestore)
 
             implementation(libs.room.runtime)
             implementation(libs.room.sqlite.bundled)

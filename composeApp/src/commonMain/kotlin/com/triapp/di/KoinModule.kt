@@ -10,6 +10,7 @@ import com.triapp.data.repository.DataRepositoryImpl
 import com.triapp.domain.usecase.GetDataUseCase
 import com.triapp.domain.usecase.GetSignUpDraftUseCase
 import com.triapp.domain.usecase.SaveSignUpDraftUseCase
+import com.triapp.domain.usecase.TaxiUseCase
 import com.triapp.local.AppDatabase
 import com.triapp.local.AppDatabaseConstructor
 import com.triapp.local.AppPreferences
@@ -104,14 +105,15 @@ val authModule = module {
 
 val repositoryModule = module {
     single<DataRepository> { DataRepositoryImpl(get()) }
-    single<MapController> { DefaultMapController() }
     single { LocationRepository(get()) }
-    single<LocationProvider> { LocationProvider() }
+    //single<MapController> { DefaultMapController() }
+    //single<LocationProvider> { LocationProvider() }
 
 }
 
 val domainModule = module {
     single { GetDataUseCase(get()) }
+    single { TaxiUseCase(get()) }
     single { SaveSignUpDraftUseCase(get()) }
     single { GetSignUpDraftUseCase(get(), get()) }
 }
