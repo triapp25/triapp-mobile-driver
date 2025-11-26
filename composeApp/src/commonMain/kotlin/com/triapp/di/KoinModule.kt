@@ -19,6 +19,8 @@ import com.triapp.presentation.feature.home.DefaultMapController
 import com.triapp.presentation.feature.home.HomeViewModel
 import com.triapp.presentation.feature.home.MapController
 import com.triapp.presentation.feature.login.LoginViewModel
+import com.triapp.presentation.feature.profile.ProfileViewModel
+import com.triapp.presentation.feature.rating.RatingViewModel
 import com.triapp.presentation.feature.signup.SignupViewModel
 import com.triapp.utils.FirebaseAuthManager
 import com.triapp.utils.FirebaseServiceImpl
@@ -119,9 +121,11 @@ val domainModule = module {
 }
 
 val presentationModule = module {
-    viewModel { SignupViewModel() }
+    viewModel { SignupViewModel(get()) }
     viewModel { LoginViewModel(get()) }
     viewModel { HomeViewModel(get()) }
+    viewModel { ProfileViewModel() }
+    viewModel { RatingViewModel() }
 }
 
 val storageModule = module {

@@ -10,18 +10,16 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.CloudUpload
-import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.Email
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Phone
+import androidx.compose.material.icons.outlined.Smartphone
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -31,82 +29,51 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.triapp.TriAppTheme
+import com.triapp.TriColors
+import com.triapp.domain.model.SignUpDomainModel
+import com.triapp.presentation.feature.login.AppButton
+import com.triapp.presentation.feature.login.AppLogo
+import com.triapp.presentation.feature.login.AppTextField
+import com.triapp.presentation.feature.login.OtpInputField
+import com.triapp.presentation.feature.login.PhoneNumberVisualTransformation
+import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.dialogs.FileKitMode
+import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
+import io.github.vinceglb.filekit.name
+import kotlinx.coroutines.delay
 import org.koin.compose.viewmodel.koinViewModel
 
-// ================== Modelos e Estados ==================
-
-enum class SignupStep(val title: String, val progress: Float) {
-    PersonalInfo("Personal Information", 0.16f),
-    Contact("Contact details", 0.33f),
-    Security("Secure your account", 0.5f),
-    Documents("Document verification", 0.66f),
-    Verification("Verificação SMS", 0.83f),
-    Success("All set!", 1.0f)
-}
-
-data class SignupData(
-    var fullName: String = "",
-    var email: String = "",
-    var phone: String = "",
-    var password: String = "",
-    var confirmPassword: String = "",
-    var documentPath: String? = null
-)
-
-// Cores (Consistentes com o design anterior)
-object SignupColors {
-    val Background = Color(0xFF000000)
-    val SurfaceDark = Color(0xFF1C1C1E)
-    val PrimaryWhite = Color(0xFFFFFFFF)
-    val TextGray = Color(0xFF8E8E93)
-    val InputBg = Color(0xFF2C2C2E)
-}
-
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
-fun SignupFlowScreen(onNavigate: () -> Unit) {
-
+fun SignupFlowScreen(activity: Any?, onNavigate: () -> Unit) {
     val viewModel = koinViewModel<SignupViewModel>()
     val uiState by viewModel.state.collectAsState()
-
     val onAction: (SignupIntent) -> Unit = viewModel::processIntent
 
-    var currentStep by remember { mutableStateOf(SignupStep.PersonalInfo) }
-    // Estado compartilhado para armazenar os dados preenchidos
-    val signupData = remember { mutableStateOf(SignupData()) }
-
     Scaffold(
-        containerColor = SignupColors.Background,
+        modifier = Modifier.imePadding(),
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            if (currentStep != SignupStep.Success) {
+            if (uiState.currentStep != SignupStep.Success) {
                 SignupTopBar(
-                    step = currentStep,
-                    onBack = {
-                        val previousStep = SignupStep.values().getOrNull(currentStep.ordinal - 1)
-                        if (previousStep != null) {
-                            currentStep = previousStep
-                        } else {
-                            // Cancelar fluxo ou fechar tela
-                        }
-                    }
+                    step = uiState.currentStep,
+                    onBack = { onAction(SignupIntent.PreviousStep) }
                 )
             }
         },
         bottomBar = {
-            // O botão fica na parte inferior para os passos 1 a 4.
-            // O passo 5 (SMS) e 6 (Sucesso) têm layouts levemente diferentes,
-            // mas podemos padronizar ou customizar dentro do conteúdo.
-            if (currentStep != SignupStep.Verification && currentStep != SignupStep.Success) {
+            if (uiState.currentStep != SignupStep.Verification && uiState.currentStep != SignupStep.Success) {
                 Button(
-                    onClick = {
-                        val nextStep = SignupStep.values().getOrNull(currentStep.ordinal + 1)
-                        if (nextStep != null) currentStep = nextStep
-                    },
+                    onClick = { onAction(SignupIntent.NextStep) },
+                    enabled = uiState.canContinue,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(24.dp)
+                        .alpha(if (uiState.canContinue) 1f else 0.4f)
                         .height(56.dp),
                     shape = RoundedCornerShape(28.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = SignupColors.PrimaryWhite)
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
                     Text(
                         text = "Continue",
@@ -120,21 +87,20 @@ fun SignupFlowScreen(onNavigate: () -> Unit) {
             }
         }
     ) { paddingValues ->
-
-        // Animação de transição entre telas
         AnimatedContent(
-            targetState = currentStep,
-            label = "SignupTransition",
-            modifier = Modifier
-                .padding(paddingValues)
-                .fillMaxSize(),
+            targetState = uiState.currentStep,
             transitionSpec = {
                 if (targetState.ordinal > initialState.ordinal) {
-                    slideInHorizontally { it } + fadeIn() togetherWith slideOutHorizontally { -it } + fadeOut()
+                    slideInHorizontally(tween(300)) { it } + fadeIn() togetherWith
+                            slideOutHorizontally(tween(300)) { -it } + fadeOut()
                 } else {
-                    slideInHorizontally { -it } + fadeIn() togetherWith slideOutHorizontally { it } + fadeOut()
+                    slideInHorizontally(tween(300)) { -it } + fadeIn() togetherWith
+                            slideOutHorizontally(tween(300)) { it } + fadeOut()
                 }
-            }
+            },
+            modifier = Modifier
+                .padding(paddingValues)
+                .fillMaxSize()
         ) { step ->
             Column(
                 modifier = Modifier
@@ -142,23 +108,28 @@ fun SignupFlowScreen(onNavigate: () -> Unit) {
                     .padding(24.dp)
             ) {
                 when (step) {
-                    SignupStep.PersonalInfo -> StepPersonalInfo(signupData)
-                    SignupStep.Contact -> StepContact(signupData)
-                    SignupStep.Security -> StepSecurity(signupData)
-                    SignupStep.Documents -> StepDocuments()
-                    SignupStep.Verification -> StepVerification(
-                        phone = signupData.value.phone,
-                        onVerified = { currentStep = SignupStep.Success }
+                    SignupStep.PersonalInfo -> StepPersonalInfo(uiState, onAction)
+                    SignupStep.Contact -> StepContact(activity, uiState, onAction)
+                    SignupStep.Security -> StepSecurity(uiState, onAction)
+                    SignupStep.Documents -> StepDocuments(
+                        onUploadProfile = { path -> onAction(SignupIntent.UploadProfilePhoto(path)) },
+                        onUploadId = { path -> onAction(SignupIntent.UploadIdDocument(path)) }
                     )
-                    SignupStep.Success -> StepSuccess(signupData.value, onNavigate)
+
+                    SignupStep.Verification -> SmsVerificationScreen(
+                        phoneNumber = uiState.phone,
+                        onVerifyClick = { code -> onAction(SignupIntent.VerifyCode(code)) },
+                        onResendClick = { onAction(SignupIntent.SendResetCode(activity = activity)) }
+                    )
+
+                    SignupStep.Success -> StepSuccess(uiState, onNavigate)
                 }
             }
         }
     }
 }
 
-// ================== Componentes da Top Bar ==================
-
+/* ================== Top Bar ================== */
 @Composable
 fun SignupTopBar(step: SignupStep, onBack: () -> Unit) {
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -168,32 +139,34 @@ fun SignupTopBar(step: SignupStep, onBack: () -> Unit) {
                 .padding(horizontal = 16.dp, vertical = 16.dp),
             contentAlignment = Alignment.Center
         ) {
-            // Botão Voltar
             IconButton(
                 onClick = onBack,
                 modifier = Modifier.align(Alignment.CenterStart)
             ) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = SignupColors.PrimaryWhite)
+                Icon(
+                    Icons.Default.ArrowBack,
+                    contentDescription = "Back",
+                    tint = MaterialTheme.colorScheme.primary
+                )
             }
 
-            // Barra de Progresso
             Row(
                 modifier = Modifier.align(Alignment.Center),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 LinearProgressIndicator(
-                    progress = { step.progress },
+                    progress = step.progress,
                     modifier = Modifier
                         .width(150.dp)
                         .height(4.dp)
                         .clip(RoundedCornerShape(2.dp)),
-                    color = SignupColors.PrimaryWhite,
-                    trackColor = SignupColors.SurfaceDark,
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surface,
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = "${step.ordinal + 1}/6", // Ajuste manual pois Success conta como passo
-                    color = SignupColors.TextGray,
+                    text = "${step.ordinal + 1}/6",
+                    color = MaterialTheme.colorScheme.secondary,
                     fontSize = 12.sp
                 )
             }
@@ -201,46 +174,64 @@ fun SignupTopBar(step: SignupStep, onBack: () -> Unit) {
     }
 }
 
-// ================== Passos Individuais ==================
+/* ================== Steps ================== */
 
-// PASSO 1
 @Composable
-fun StepPersonalInfo(data: MutableState<SignupData>) {
+fun StepPersonalInfo(uiState: SignUpDomainModel, onAction: (SignupIntent) -> Unit) {
     Column {
-        Text("Personal Information", color = SignupColors.TextGray, fontSize = 14.sp)
-        Text("Tell us about yourself", color = SignupColors.PrimaryWhite, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text("Personal Information", color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
+        Text(
+            "Tell us about yourself",
+            color = MaterialTheme.colorScheme.primary,
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold
+        )
         Spacer(modifier = Modifier.height(32.dp))
 
         CustomTextField(
             label = "Full name",
-            value = data.value.fullName,
-            onValueChange = { data.value = data.value.copy(fullName = it) },
+            value = uiState.fullName,
+            onValueChange = { onAction(SignupIntent.EnterFullName(it)) },
             placeholder = "John Doe"
         )
     }
 }
 
-// PASSO 2
 @Composable
-fun StepContact(data: MutableState<SignupData>) {
+fun StepContact(activity: Any?, uiState: SignUpDomainModel, onAction: (SignupIntent) -> Unit) {
+    var phoneNumber by remember { mutableStateOf("") }
     Column {
-        Text("Contact details", color = SignupColors.TextGray, fontSize = 14.sp)
-        Text("How can we reach you?", color = SignupColors.PrimaryWhite, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text("Contact details", color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
+        Text(
+            "How can we reach you?",
+            color = MaterialTheme.colorScheme.primary,
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold
+        )
         Spacer(modifier = Modifier.height(32.dp))
 
         CustomTextField(
             label = "Email address",
-            value = data.value.email,
-            onValueChange = { data.value = data.value.copy(email = it) },
+            value = uiState.email,
+            onValueChange = { onAction(SignupIntent.EnterEmail(it)) },
             placeholder = "john@example.com",
             icon = Icons.Outlined.Email,
             keyboardType = KeyboardType.Email
         )
         Spacer(modifier = Modifier.height(16.dp))
-        CustomTextField(
-            label = "Phone number",
-            value = data.value.phone,
-            onValueChange = { data.value = data.value.copy(phone = it) },
+
+        AppTextField(
+            value = phoneNumber,
+            onValueChange = {
+                phoneNumber = it.filter(Char::isDigit).take(11)
+                if (phoneNumber.length == 11) onAction(
+                    SignupIntent.EnterPhone(
+                        activity,
+                        phoneNumber
+                    )
+                )
+            },
+            visualTransformation = PhoneNumberVisualTransformation(),
             placeholder = "(11) 99999-9999",
             icon = Icons.Outlined.Phone,
             keyboardType = KeyboardType.Phone
@@ -248,18 +239,22 @@ fun StepContact(data: MutableState<SignupData>) {
     }
 }
 
-// PASSO 3
 @Composable
-fun StepSecurity(data: MutableState<SignupData>) {
+fun StepSecurity(uiState: SignUpDomainModel, onAction: (SignupIntent) -> Unit) {
     Column {
-        Text("Secure your account", color = SignupColors.TextGray, fontSize = 14.sp)
-        Text("Create a strong password", color = SignupColors.PrimaryWhite, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text("Secure your account", color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
+        Text(
+            "Create a strong password",
+            color = MaterialTheme.colorScheme.primary,
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold
+        )
         Spacer(modifier = Modifier.height(32.dp))
 
         CustomTextField(
             label = "Password",
-            value = data.value.password,
-            onValueChange = { data.value = data.value.copy(password = it) },
+            value = uiState.password,
+            onValueChange = { onAction(SignupIntent.EnterPassword(it)) },
             placeholder = "********",
             icon = Icons.Outlined.Lock,
             isPassword = true
@@ -267,8 +262,8 @@ fun StepSecurity(data: MutableState<SignupData>) {
         Spacer(modifier = Modifier.height(16.dp))
         CustomTextField(
             label = "Confirm password",
-            value = data.value.confirmPassword,
-            onValueChange = { data.value = data.value.copy(confirmPassword = it) },
+            value = uiState.confirmPassword,
+            onValueChange = { onAction(SignupIntent.EnterConfirmPassword(it)) },
             placeholder = "********",
             icon = Icons.Outlined.Lock,
             isPassword = true
@@ -276,89 +271,187 @@ fun StepSecurity(data: MutableState<SignupData>) {
     }
 }
 
-// PASSO 4
 @Composable
-fun StepDocuments() {
+fun StepDocuments(
+    onUploadProfile: (String) -> Unit,
+    onUploadId: (String) -> Unit
+) {
+    var selectedFileProfileFirst by remember { mutableStateOf<PlatformFile?>(null) }
+    var selectedFileProfileSecond by remember { mutableStateOf<PlatformFile?>(null) }
+    var selectedFileIdFirst by remember { mutableStateOf<PlatformFile?>(null) }
+    var selectedFileIdSecond by remember { mutableStateOf<PlatformFile?>(null) }
+
+    var uploadStatusFirst by remember { mutableStateOf("") }
+    var uploadStatusSecond by remember { mutableStateOf("") }
+
+    val pickerLauncherFirst = rememberFilePickerLauncher(
+        mode = FileKitMode.Single
+    ) { file ->
+        selectedFileProfileFirst = file
+        selectedFileProfileFirst?.let { onUploadProfile(it.name) }
+        uploadStatusFirst =
+            if (selectedFileProfileFirst != null) "Arquivo selecionado: ${selectedFileProfileFirst?.name}" else "Nenhum arquivo selecionado"
+    }
+
+    val pickerLauncherSecond = rememberFilePickerLauncher(
+        mode = FileKitMode.Single
+    ) { file ->
+        selectedFileIdSecond = file
+        selectedFileIdSecond?.let { onUploadId(it.name) }
+        uploadStatusSecond =
+            if (selectedFileIdSecond != null) "Arquivo selecionado: ${selectedFileIdSecond?.name}" else "Nenhum arquivo selecionado"
+    }
+
     Column {
-        Text("Document verification", color = SignupColors.TextGray, fontSize = 14.sp)
-        Text("Verify your identity", color = SignupColors.PrimaryWhite, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text("Document verification", color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
+        Text(
+            "Verify your identity",
+            color = MaterialTheme.colorScheme.primary,
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold
+        )
         Spacer(modifier = Modifier.height(32.dp))
 
-        Text("Profile photo", color = SignupColors.TextGray, fontSize = 14.sp)
-        Text("A clear photo of your face", color = SignupColors.TextGray, fontSize = 12.sp)
+        Text("Profile photo", color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
+        Text("A clear photo of your face", color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
         Spacer(modifier = Modifier.height(8.dp))
 
-        DocumentUploadCard(title = "Drop your file here or browse")
+        DocumentUploadCard(title = "Drop your file here or browse") {
+            pickerLauncherFirst.launch()
+        }
+
+        if (uploadStatusFirst.isNotBlank()) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(uploadStatusFirst, color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
+        }
+
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Text("ID Document", color = SignupColors.TextGray, fontSize = 14.sp)
-        Text("Government-issued ID or passport", color = SignupColors.TextGray, fontSize = 12.sp)
+        Text("ID Document", color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
+        Text("Government-issued ID or passport", color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
         Spacer(modifier = Modifier.height(8.dp))
 
-        DocumentUploadCard(title = "Drop your file here or browse")
+        DocumentUploadCard(title = "Drop your file here or browse") {
+            pickerLauncherSecond.launch()
+        }
+
+        if (uploadStatusSecond.isNotBlank()) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(uploadStatusSecond, color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
+        }
     }
 }
 
-// PASSO 5 (Reutilizando lógica da tela SMS anterior)
 @Composable
-fun StepVerification(phone: String, onVerified: () -> Unit) {
+fun SmsVerificationScreen(
+    phoneNumber: String,
+    onVerifyClick: (String) -> Unit,
+    onResendClick: () -> Unit
+) {
     var code by remember { mutableStateOf("") }
+    var timeLeft by remember { mutableIntStateOf(21) }
+
+    LaunchedEffect(key1 = timeLeft) {
+        if (timeLeft > 0) {
+            delay(1000L)
+            timeLeft--
+        }
+    }
 
     Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(vertical = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Spacer(modifier = Modifier.height(40.dp))
-        Box(
-            modifier = Modifier
-                .size(64.dp)
-                .background(SignupColors.PrimaryWhite, RoundedCornerShape(16.dp)),
-            contentAlignment = Alignment.Center
+        AppLogo(
+            title = "Verificação SMS",
+            subtitle = "Enviamos um código de 6 dígitos para\n$phoneNumber",
+            icon = Icons.Outlined.Smartphone,
+            subtitleColor = MaterialTheme.colorScheme.secondary,
+            isSubtitleBold = false
+        )
+
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface
         ) {
-            Icon(Icons.Outlined.Smartphone, null, tint = Color.Black)
-        }
-        Spacer(modifier = Modifier.height(24.dp))
-        Text("Verificação SMS", color = SignupColors.PrimaryWhite, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(8.dp))
-        Text("Enviamos um código de 6 dígitos para", color = SignupColors.TextGray, fontSize = 14.sp)
-        Text(phone.ifEmpty { "(11) 99999-9999" }, color = SignupColors.PrimaryWhite, fontWeight = FontWeight.Bold)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Digite o código",
+                    color = MaterialTheme.colorScheme.primary,
+                    fontSize = 18.sp,
+                    modifier = Modifier.align(Alignment.Start)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Insira o código recebido por SMS",
+                    color = MaterialTheme.colorScheme.secondary,
+                    fontSize = 14.sp,
+                    modifier = Modifier.align(Alignment.Start)
+                )
 
-        Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-        // Simulação do componente OTP
-        Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-            repeat(6) {
-                Box(modifier = Modifier
-                    .size(45.dp, 55.dp)
-                    .background(SignupColors.InputBg, RoundedCornerShape(8.dp)))
+                OtpInputField(code = code, onCodeChange = { if (it.length <= 6) code = it })
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                AppButton(
+                    text = "Verificar código",
+                    onClick = { onVerifyClick(code) },
+                    enabled = code.length == 6
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Text(text = "Não recebeu o código?", color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.clickable(enabled = timeLeft == 0) {
+                        if (timeLeft == 0) {
+                            timeLeft = 21
+                            onResendClick()
+                        }
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = null,
+                        tint = if (timeLeft == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = if (timeLeft > 0) "Reenviar em ${timeLeft}s" else "Reenviar agora",
+                        color = if (timeLeft == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
+                        fontSize = 14.sp
+                    )
+                }
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
-        Text("Não recebeu o código?", color = SignupColors.TextGray)
-        Text("Reenviar código", color = SignupColors.PrimaryWhite, fontWeight = FontWeight.Bold, textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline)
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        Button(
-            onClick = onVerified,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0D1B2A)), // Azul bem escuro ou preto com borda
-            shape = RoundedCornerShape(12.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF1E3A8A)) // Borda azul sutil
-        ) {
-            Text("Verify: Use 123456", color = Color.White) // Texto simulado
-        }
-        Spacer(modifier = Modifier.height(24.dp))
+        Text(
+            text = "O código expira em 10 minutos",
+            color = TriColors.DarkText,
+            fontSize = 12.sp,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
     }
 }
 
-// PASSO 6 - Sucesso
 @Composable
-fun StepSuccess(data: SignupData, onFinish: () -> Unit) {
+fun StepSuccess(data: SignUpDomainModel, onFinish: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -367,23 +460,31 @@ fun StepSuccess(data: SignupData, onFinish: () -> Unit) {
         Box(
             modifier = Modifier
                 .size(80.dp)
-                .background(SignupColors.PrimaryWhite, CircleShape),
+                .background(MaterialTheme.colorScheme.primary, CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(Icons.Default.Check, null, tint = Color.Black, modifier = Modifier.size(40.dp))
         }
 
         Spacer(modifier = Modifier.height(24.dp))
-        Text("All set!", color = SignupColors.PrimaryWhite, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-        Text("Your account has been created successfully", color = SignupColors.TextGray, textAlign = TextAlign.Center)
+        Text(
+            "All set!",
+            color = MaterialTheme.colorScheme.primary,
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            "Your account has been created successfully",
+            color = MaterialTheme.colorScheme.secondary,
+            textAlign = TextAlign.Center
+        )
 
         Spacer(modifier = Modifier.height(40.dp))
 
-        // Card de Resumo
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(SignupColors.SurfaceDark, RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp))
                 .padding(24.dp)
         ) {
             SuccessRow(label = "Name", value = data.fullName.ifEmpty { "N/A" })
@@ -401,7 +502,7 @@ fun StepSuccess(data: SignupData, onFinish: () -> Unit) {
                 .fillMaxWidth()
                 .height(56.dp),
             shape = RoundedCornerShape(28.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = SignupColors.PrimaryWhite)
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
         ) {
             Text("Get started", color = Color.Black, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.width(8.dp))
@@ -410,7 +511,7 @@ fun StepSuccess(data: SignupData, onFinish: () -> Unit) {
     }
 }
 
-// ================== Helpers UI ==================
+/* ================== Helpers UI ================== */
 
 @Composable
 fun CustomTextField(
@@ -423,23 +524,30 @@ fun CustomTextField(
     keyboardType: KeyboardType = KeyboardType.Text
 ) {
     Column {
-        Text(label, color = SignupColors.TextGray, fontSize = 12.sp, modifier = Modifier.padding(start = 4.dp, bottom = 4.dp))
+        Text(
+            label,
+            color = MaterialTheme.colorScheme.secondary,
+            fontSize = 12.sp,
+            modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
+        )
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             placeholder = { Text(placeholder, color = Color.Gray) },
-            leadingIcon = if (icon != null) { { Icon(icon, null, tint = SignupColors.TextGray) } } else null,
+            leadingIcon = if (icon != null) {
+                { Icon(icon, null, tint = MaterialTheme.colorScheme.secondary) }
+            } else null,
             visualTransformation = if (isPassword) PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = SignupColors.InputBg,
-                unfocusedContainerColor = SignupColors.InputBg,
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                 focusedBorderColor = Color.Transparent,
                 unfocusedBorderColor = Color.Transparent,
-                focusedTextColor = SignupColors.PrimaryWhite,
-                unfocusedTextColor = SignupColors.PrimaryWhite
+                focusedTextColor = MaterialTheme.colorScheme.primary,
+                unfocusedTextColor = MaterialTheme.colorScheme.primary
             ),
             singleLine = true
         )
@@ -447,35 +555,49 @@ fun CustomTextField(
 }
 
 @Composable
-fun DocumentUploadCard(title: String) {
+fun DocumentUploadCard(title: String, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(140.dp)
-            .background(SignupColors.InputBg, RoundedCornerShape(12.dp))
-            // Simulação de borda tracejada (dashed border é complexo no compose nativo simples, usando sólida por hora)
-            .border(1.dp, SignupColors.SurfaceDark, RoundedCornerShape(12.dp))
-            .clickable { /* Abrir seletor de arquivo */ },
+            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
+            .border(1.dp, MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp))
+            .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(Icons.Filled.CloudUpload, null, tint = SignupColors.TextGray, modifier = Modifier.size(32.dp))
+            Icon(
+                Icons.Filled.CloudUpload,
+                null,
+                tint = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.size(32.dp)
+            )
             Spacer(modifier = Modifier.height(8.dp))
-            Text(title, color = SignupColors.TextGray, fontSize = 12.sp)
+            Text(title, color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
             Text("PDF, PNG, or JPG (max. 10MB)", color = Color.DarkGray, fontSize = 10.sp)
             Spacer(modifier = Modifier.height(16.dp))
             Row {
-                Button(onClick = {}, colors = ButtonDefaults.buttonColors(containerColor = SignupColors.SurfaceDark), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp), modifier = Modifier.height(32.dp)) {
+                Button(
+                    onClick = onClick,
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                    modifier = Modifier.height(32.dp)
+                ) {
                     Icon(Icons.Default.Image, null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Gallery", fontSize = 12.sp)
                 }
-                Spacer(modifier = Modifier.width(12.dp))
-                Button(onClick = {}, colors = ButtonDefaults.buttonColors(containerColor = SignupColors.SurfaceDark), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp), modifier = Modifier.height(32.dp)) {
-                    Icon(Icons.Default.CameraAlt, null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Camera", fontSize = 12.sp)
-                }
+                //Spacer(modifier = Modifier.width(12.dp))
+                //Button(
+                //    onClick = onClick,
+                //    colors = ButtonDefaults.buttonColors(containerColor = SignupColors.SurfaceDark),
+                //    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                //    modifier = Modifier.height(32.dp)
+                //) {
+                //    Icon(Icons.Default.CameraAlt, null, modifier = Modifier.size(16.dp))
+                //    Spacer(modifier = Modifier.width(4.dp))
+                //    Text("Camera", fontSize = 12.sp)
+                //}
             }
         }
     }
@@ -487,7 +609,12 @@ fun SuccessRow(label: String, value: String) {
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(label, color = SignupColors.TextGray, fontSize = 14.sp)
-        Text(value, color = SignupColors.PrimaryWhite, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        Text(label, color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
+        Text(
+            value,
+            color = MaterialTheme.colorScheme.primary,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold
+        )
     }
 }

@@ -7,13 +7,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navDeepLink
-import com.triapp.presentation.feature.home.HomeScreen
 import com.triapp.presentation.feature.home.HomeScreenTwo
 import com.triapp.presentation.feature.login.LoginScreen
-import com.triapp.presentation.feature.profile.ProfileFlow
-import com.triapp.presentation.feature.rating.TripRatingScreen
+import com.triapp.presentation.feature.profile.ProfileFlowScreen
+import com.triapp.presentation.feature.rating.TripRatingFlowScreen
 import com.triapp.presentation.feature.signup.SignupFlowScreen
-import com.triapp.presentation.feature.signup.SignupScreen
 
 @Composable
 fun AppNavigationHost(modifier: Modifier = Modifier, activity: Any?) {
@@ -31,49 +29,50 @@ fun AppNavGraph(
 
     NavHost(
         navController = navController,
-        startDestination = NavRoutes.LOGIN,
+        startDestination = NavRoutes.HOME,
         modifier = modifier
     ) {
         composable(
             route = NavRoutes.LOGIN,
             deepLinks = listOf(navDeepLink { uriPattern = "triapp://login" })
         ) {
-            LoginScreen() {
-                navigator.toSignup()
-            }
+            LoginScreen(
+                activity,
+                { navigator.toSignup() },
+                { navigator.toHome() }
+            )
         }
 
         composable(
             route = NavRoutes.SIGNUP,
             deepLinks = listOf(navDeepLink { uriPattern = "triapp://signup" })
         ) {
-            SignupFlowScreen(
+            SignupFlowScreen(activity)
                 {
                     navigator.toHome()
                 }
-            )
         }
 
         composable(
             route = NavRoutes.HOME,
             deepLinks = listOf(navDeepLink { uriPattern = "triapp://home" })
         ) {
-            HomeScreenTwo(){
+            HomeScreenTwo() {
                 navigator.toRating()
             }
         }
-    composable(
+        composable(
             route = NavRoutes.PROFILE,
             deepLinks = listOf(navDeepLink { uriPattern = "triapp://profile" })
         ) {
-        ProfileFlow()
+            ProfileFlowScreen({},{})
         }
 
         composable(
             route = NavRoutes.RATING,
             deepLinks = listOf(navDeepLink { uriPattern = "triapp://rating" })
         ) {
-            TripRatingScreen() {
+            TripRatingFlowScreen {
                 navigator.toHome()
             }
         }

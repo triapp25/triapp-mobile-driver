@@ -27,7 +27,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.triapp.presentation.feature.profile.ProfileFlow
+import com.triapp.presentation.feature.profile.ProfileFlowScreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -69,7 +69,7 @@ fun HomeScreenTwo(onNavigate: () -> Unit) {
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            ProfileFlow()
+            ProfileFlowScreen({},{})
         }
     ) {
         Scaffold(

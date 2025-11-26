@@ -6,8 +6,11 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,11 +35,14 @@ import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material.icons.outlined.Smartphone
+import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -58,41 +64,39 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.triapp.TriColors
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 
-// ================== Design System (Cores) ==================
-object AppColors {
-    val Background = Color(0xFF000000)
-    val CardBackground = Color(0xFF1C1C1E)
-    val InputBackground = Color(0xFF2C2C2E)
-    val White = Color(0xFFFFFFFF)
-    val Gray = Color(0xFF8E8E93)
-    val ButtonGray = Color(0xFF3A3A3C)
-    val DarkText = Color(0xFF48484A)
-}
-
 // ================== Tela Principal ==================
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
-    onNavigate: () -> Unit
+    activity: Any?,
+    onNavigateToSignup: () -> Unit,
+    onNavigateToHome: () -> Unit
 ) {
     val viewModel: LoginViewModel = koinViewModel()
     val uiState by viewModel.state.collectAsState()
@@ -109,15 +113,27 @@ fun LoginScreen(
                 is LoginEffect.ShowError -> scope.launch { snackbarHostState.showSnackbar(effect.message) }
                 is LoginEffect.ShowForgotPassword -> showForgotPassword = true
                 is LoginEffect.HideForgotPassword -> showForgotPassword = false
-                is LoginEffect.NavigateToSignup -> onNavigate()
+                is LoginEffect.NavigateToSignup -> onNavigateToSignup()
+                is LoginEffect.NavigateToHome -> onNavigateToHome()
                 else -> Unit
             }
         }
     }
 
+    if (uiState.isLoading) {
+        Column(
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            CircularProgressIndicator(Modifier.size(100.dp))
+        }
+        return
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = AppColors.Background,
+        containerColor = MaterialTheme.colorScheme.background,
         // Garante que o conteúdo não fique atrás da barra de navegação do sistema
         modifier = Modifier.navigationBarsPadding()
     ) { padding ->
@@ -134,19 +150,37 @@ fun LoginScreen(
                 targetState = uiState.step,
                 label = "LoginSteps",
                 transitionSpec = {
-                    fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
+                    fadeIn(animationSpec = tween(300)) togetherWith fadeOut(
+                        animationSpec = tween(
+                            300
+                        )
+                    )
                 }
             ) { step ->
                 when (step) {
                     LoginStep.Login -> RideLoginScreen(
-                        onLoginClick = { phone -> viewModel.processIntent(LoginIntent.SubmitPhone(phone)) }, // Exemplo de Intent com dados
+                        onLoginClick = { phone ->
+                            viewModel.processIntent(
+                                LoginIntent.SubmitLogin(
+                                    activity = activity,
+                                    phone
+                                )
+                            )
+                        },
                         onForgotPasswordClick = { viewModel.processIntent(LoginIntent.OpenForgotPassword) },
                         onSignUpClick = { viewModel.processIntent(LoginIntent.NavigateToSignup) }
                     )
+
                     LoginStep.ResetCode -> SmsVerificationScreen(
-                        phoneNumber = "51 - 99823-2323", // Pegar do uiState na realidade
-                        onVerifyClick = { code -> viewModel.processIntent(LoginIntent.VerifyCode(code)) },
-                        onResendClick = { viewModel.processIntent(LoginIntent.SendResetCode) }
+                        phoneNumber = uiState.phone,
+                        onVerifyClick = { code ->
+                            viewModel.processIntent(
+                                LoginIntent.VerifyCode(
+                                    code
+                                )
+                            )
+                        },
+                        onResendClick = { viewModel.processIntent(LoginIntent.SendResetCode(activity)) }
                     )
                 }
             }
@@ -158,16 +192,18 @@ fun LoginScreen(
                         showForgotPassword = false
                     },
                     sheetState = sheetState,
-                    containerColor = AppColors.CardBackground,
-                    dragHandle = { BottomSheetDefaults.DragHandle(color = AppColors.Gray) }
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    dragHandle = { BottomSheetDefaults.DragHandle(color = MaterialTheme.colorScheme.secondary) }
                 ) {
                     ForgotPasswordScreen(
                         onSendReset = { email ->
                             viewModel.processIntent(LoginIntent.RequestPasswordReset(email))
-                            scope.launch { sheetState.hide() }.invokeOnCompletion { showForgotPassword = false }
+                            scope.launch { sheetState.hide() }
+                                .invokeOnCompletion { showForgotPassword = false }
                         },
                         onBackToLogin = {
-                            scope.launch { sheetState.hide() }.invokeOnCompletion { showForgotPassword = false }
+                            scope.launch { sheetState.hide() }
+                                .invokeOnCompletion { showForgotPassword = false }
                         }
                     )
                 }
@@ -204,7 +240,7 @@ fun RideLoginScreen(
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(24.dp),
-            color = AppColors.CardBackground,
+            color = MaterialTheme.colorScheme.surface,
             shadowElevation = 4.dp
         ) {
             Column(
@@ -215,7 +251,7 @@ fun RideLoginScreen(
             ) {
                 Text(
                     text = "Welcome back",
-                    color = AppColors.White,
+                    color = MaterialTheme.colorScheme.primary,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.align(Alignment.Start)
@@ -223,7 +259,7 @@ fun RideLoginScreen(
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "Sign in with your phone number",
-                    color = AppColors.Gray,
+                    color = MaterialTheme.colorScheme.secondary,
                     fontSize = 14.sp,
                     modifier = Modifier.align(Alignment.Start)
                 )
@@ -231,7 +267,8 @@ fun RideLoginScreen(
 
                 AppTextField(
                     value = phoneNumber,
-                    onValueChange = { phoneNumber = it },
+                    onValueChange = { phoneNumber = it.filter(Char::isDigit).take(11) },
+                    visualTransformation = PhoneNumberVisualTransformation(),
                     placeholder = "(11) 99999-9999",
                     icon = Icons.Outlined.Phone,
                     keyboardType = KeyboardType.Phone
@@ -239,14 +276,13 @@ fun RideLoginScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Botão de ação principal (opcional na tela de login se for automático, mas bom ter)
                 AppButton(text = "Continue", onClick = { onLoginClick(phoneNumber) })
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
                     text = "Forgot password?",
-                    color = AppColors.Gray,
+                    color = MaterialTheme.colorScheme.secondary,
                     fontSize = 14.sp,
                     modifier = Modifier.clickable(
                         interactionSource = remember { MutableInteractionSource() },
@@ -259,7 +295,12 @@ fun RideLoginScreen(
                 val signUpText = buildAnnotatedString {
                     append("Don't have an account? ")
                     pushStringAnnotation(tag = "signup", annotation = "signup")
-                    withStyle(style = SpanStyle(color = AppColors.White, textDecoration = TextDecoration.Underline)) {
+                    withStyle(
+                        style = SpanStyle(
+                            color = MaterialTheme.colorScheme.primary,
+                            textDecoration = TextDecoration.Underline
+                        )
+                    ) {
                         append("Sign up")
                     }
                     pop()
@@ -267,9 +308,13 @@ fun RideLoginScreen(
 
                 ClickableText(
                     text = signUpText,
-                    style = MaterialTheme.typography.bodyMedium.copy(color = AppColors.Gray),
+                    style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.secondary),
                     onClick = { offset ->
-                        signUpText.getStringAnnotations(tag = "signup", start = offset, end = offset)
+                        signUpText.getStringAnnotations(
+                            tag = "signup",
+                            start = offset,
+                            end = offset
+                        )
                             .firstOrNull()?.let { onSignUpClick() }
                     }
                 )
@@ -289,7 +334,10 @@ fun RideLoginScreen(
         ClickableText(
             text = termsText,
             modifier = Modifier.padding(bottom = 16.dp),
-            style = MaterialTheme.typography.bodySmall.copy(color = AppColors.Gray, textAlign = TextAlign.Center),
+            style = MaterialTheme.typography.bodySmall.copy(
+                color = MaterialTheme.colorScheme.secondary,
+                textAlign = TextAlign.Center
+            ),
             onClick = { /* Handle Terms Click */ }
         )
     }
@@ -322,14 +370,14 @@ fun SmsVerificationScreen(
             title = "Verificação SMS",
             subtitle = "Enviamos um código de 6 dígitos para\n$phoneNumber",
             icon = Icons.Outlined.Smartphone,
-            subtitleColor = AppColors.Gray,
+            subtitleColor = MaterialTheme.colorScheme.secondary,
             isSubtitleBold = false
         )
 
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(24.dp),
-            color = AppColors.CardBackground
+            color = MaterialTheme.colorScheme.surface
         ) {
             Column(
                 modifier = Modifier
@@ -339,14 +387,14 @@ fun SmsVerificationScreen(
             ) {
                 Text(
                     text = "Digite o código",
-                    color = AppColors.White,
+                    color = MaterialTheme.colorScheme.primary,
                     fontSize = 18.sp,
                     modifier = Modifier.align(Alignment.Start)
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "Insira o código recebido por SMS",
-                    color = AppColors.Gray,
+                    color = MaterialTheme.colorScheme.secondary,
                     fontSize = 14.sp,
                     modifier = Modifier.align(Alignment.Start)
                 )
@@ -365,13 +413,13 @@ fun SmsVerificationScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                Text(text = "Não recebeu o código?", color = AppColors.Gray, fontSize = 14.sp)
+                Text(text = "Não recebeu o código?", color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.clickable(enabled = timeLeft == 0) {
-                        if(timeLeft == 0) {
+                        if (timeLeft == 0) {
                             timeLeft = 21
                             onResendClick()
                         }
@@ -380,13 +428,13 @@ fun SmsVerificationScreen(
                     Icon(
                         imageVector = Icons.Default.Refresh,
                         contentDescription = null,
-                        tint = if(timeLeft == 0) AppColors.White else AppColors.Gray,
+                        tint = if (timeLeft == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = if (timeLeft > 0) "Reenviar em ${timeLeft}s" else "Reenviar agora",
-                        color = if(timeLeft == 0) AppColors.White else AppColors.Gray,
+                        color = if (timeLeft == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
                         fontSize = 14.sp
                     )
                 }
@@ -395,7 +443,7 @@ fun SmsVerificationScreen(
 
         Text(
             text = "O código expira em 10 minutos",
-            color = AppColors.DarkText,
+            color = TriColors.DarkText,
             fontSize = 12.sp,
             modifier = Modifier.padding(bottom = 16.dp)
         )
@@ -419,13 +467,13 @@ fun ForgotPasswordScreen(
         Box(
             modifier = Modifier
                 .size(64.dp)
-                .background(AppColors.White, shape = RoundedCornerShape(18.dp)),
+                .background(MaterialTheme.colorScheme.primary, shape = RoundedCornerShape(18.dp)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Outlined.Lock,
                 contentDescription = "Lock",
-                tint = AppColors.Background,
+                tint = MaterialTheme.colorScheme.background,
                 modifier = Modifier.size(32.dp)
             )
         }
@@ -434,7 +482,7 @@ fun ForgotPasswordScreen(
 
         Text(
             text = "Forgot password?",
-            color = AppColors.White,
+            color = MaterialTheme.colorScheme.primary,
             fontSize = 20.sp,
             fontWeight = FontWeight.SemiBold
         )
@@ -443,7 +491,7 @@ fun ForgotPasswordScreen(
 
         Text(
             text = "No worries, we'll send you reset instructions",
-            color = AppColors.Gray,
+            color = MaterialTheme.colorScheme.secondary,
             fontSize = 14.sp,
             textAlign = TextAlign.Center
         )
@@ -466,7 +514,7 @@ fun ForgotPasswordScreen(
 
         Text(
             text = "Back to login",
-            color = AppColors.Gray,
+            color = MaterialTheme.colorScheme.secondary,
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.clickable { onBackToLogin() }
@@ -482,7 +530,7 @@ fun AppLogo(
     title: String,
     subtitle: String,
     icon: ImageVector,
-    subtitleColor: Color = AppColors.Gray,
+    subtitleColor: Color = MaterialTheme.colorScheme.secondary,
     isSubtitleBold: Boolean = false
 ) {
     Column(
@@ -492,20 +540,20 @@ fun AppLogo(
         Box(
             modifier = Modifier
                 .size(64.dp)
-                .background(AppColors.White, shape = RoundedCornerShape(18.dp)),
+                .background(MaterialTheme.colorScheme.primary, shape = RoundedCornerShape(18.dp)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = "Logo",
-                tint = AppColors.Background,
+                tint = MaterialTheme.colorScheme.background,
                 modifier = Modifier.size(32.dp)
             )
         }
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = title,
-            color = AppColors.White,
+            color = MaterialTheme.colorScheme.primary,
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold
         )
@@ -514,7 +562,7 @@ fun AppLogo(
             text = subtitle,
             color = subtitleColor,
             fontSize = 16.sp,
-            fontWeight = if(isSubtitleBold) FontWeight.Bold else FontWeight.Normal,
+            fontWeight = if (isSubtitleBold) FontWeight.Bold else FontWeight.Normal,
             textAlign = TextAlign.Center
         )
     }
@@ -534,14 +582,20 @@ fun AppTextField(
         onValueChange = onValueChange,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        leadingIcon = { Icon(imageVector = icon, contentDescription = null, tint = AppColors.Gray) },
-        placeholder = { Text(text = placeholder, color = AppColors.Gray) },
+        leadingIcon = {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.secondary
+            )
+        },
+        placeholder = { Text(text = placeholder, color = MaterialTheme.colorScheme.secondary) },
         colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = AppColors.InputBackground,
-            unfocusedContainerColor = AppColors.InputBackground,
-            focusedTextColor = AppColors.White,
-            unfocusedTextColor = AppColors.White,
-            cursorColor = AppColors.White,
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            focusedTextColor = MaterialTheme.colorScheme.primary,
+            unfocusedTextColor = MaterialTheme.colorScheme.primary,
+            cursorColor = MaterialTheme.colorScheme.primary,
             focusedBorderColor = Color.Transparent,
             unfocusedBorderColor = Color.Transparent
         ),
@@ -563,15 +617,16 @@ fun AppButton(
             .fillMaxWidth()
             .height(50.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = AppColors.ButtonGray,
-            disabledContainerColor = AppColors.ButtonGray.copy(alpha = 0.5f)
+            containerColor = MaterialTheme.colorScheme.primary,
+            disabledContainerColor = TriColors.ButtonGray.copy(alpha = 0.5f)
         ),
         shape = RoundedCornerShape(12.dp),
-        enabled = enabled
+        enabled = enabled,
+        interactionSource = remember { MutableInteractionSource() },
     ) {
         Text(
             text = text,
-            color = if(enabled) Color.Black else Color.Gray,
+            color = if (enabled) Color.Black else Color.Gray,
             fontWeight = FontWeight.SemiBold,
             fontSize = 16.sp
         )
@@ -579,32 +634,61 @@ fun AppButton(
 }
 
 @Composable
-fun OtpInputField(code: String, onCodeChange: (String) -> Unit) {
-    val focusManager = LocalFocusManager.current
+fun OtpInputField(
+    code: String,
+    onCodeChange: (String) -> Unit
+) {
+    val focusRequester = remember { FocusRequester() }
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
 
     BasicTextField(
         value = code,
         onValueChange = {
-            onCodeChange(it)
-            if (it.length == 6) focusManager.clearFocus()
+            if (it.length <= 6) onCodeChange(it)
         },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-        cursorBrush = SolidColor(Color.Transparent),
+        cursorBrush = SolidColor(Color.White.copy(alpha = 0.8f)), // pequeno cursor, não invisível
+        interactionSource = interactionSource,
+        textStyle = LocalTextStyle.current.copy( // textStyle obrigatório
+            color = Color.Transparent // texto invisível, já que mostramos nas caixinhas
+        ),
+        modifier = Modifier
+            .focusRequester(focusRequester)
+            .onFocusChanged { /* não use focusable() */ },
         decorationBox = {
-            Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 repeat(6) { index ->
-                    val char = if (index < code.length) code[index].toString() else ""
-                    val isFocused = code.length == index // Lógica visual para foco se desejar adicionar borda
+
+                    val isBoxFocused = isFocused && code.length == index
+
                     Box(
                         modifier = Modifier
-                            .width(45.dp)
-                            .height(55.dp)
-                            .background(AppColors.InputBackground, RoundedCornerShape(12.dp)),
+                            .size(width = 45.dp, height = 55.dp)
+                            .background(
+                                MaterialTheme.colorScheme.surfaceVariant,
+                                RoundedCornerShape(12.dp)
+                            )
+                            .border(
+                                width = 2.dp,
+                                color = if (isBoxFocused) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            .clickable {
+                                focusRequester.requestFocus()
+                            },
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = char,
-                            color = AppColors.White,
+                            text = if (index < code.length) code[index].toString() else "",
+                            color = MaterialTheme.colorScheme.primary,
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Bold,
                             textAlign = TextAlign.Center
@@ -616,9 +700,65 @@ fun OtpInputField(code: String, onCodeChange: (String) -> Unit) {
     )
 }
 
+class PhoneNumberVisualTransformation : VisualTransformation {
+
+    override fun filter(text: AnnotatedString): TransformedText {
+        val raw = text.text.filter { it.isDigit() }.take(11)
+
+        val formatted = buildString {
+            if (raw.isNotEmpty()) append("(")
+            if (raw.length >= 1) append(raw.substring(0, 1))
+            if (raw.length >= 2) append(raw.substring(1, 2))
+            if (raw.length >= 2) append(") ")
+
+            if (raw.length >= 3) append(raw.substring(2, minOf(7, raw.length)))
+            if (raw.length >= 7) append("-")
+            if (raw.length >= 7) append(raw.substring(7))
+        }
+
+        val originalToTransformed = IntArray(raw.length) { -1 }
+        var rawIndex = 0
+
+        formatted.forEachIndexed { index, c ->
+            if (c.isDigit()) {
+                originalToTransformed[rawIndex] = index
+                rawIndex++
+            }
+        }
+
+        val offsetMapping = object : OffsetMapping {
+
+            override fun originalToTransformed(offset: Int): Int {
+                return when {
+                    offset < 0 -> 0
+                    offset >= raw.length -> formatted.length
+                    else -> originalToTransformed[offset]
+                }
+            }
+
+            override fun transformedToOriginal(offset: Int): Int {
+                if (offset <= 0) return 0
+                if (offset >= formatted.length) return raw.length
+
+                // encontra o último dígito antes do cursor
+                for (i in originalToTransformed.indices.reversed()) {
+                    if (originalToTransformed[i] <= offset) return i + 1
+                }
+                return 0
+            }
+        }
+
+        return TransformedText(
+            AnnotatedString(formatted),
+            offsetMapping
+        )
+    }
+}
+
+
 // ================== Previews ==================
 @Preview
 @Composable
 fun MainPreview() {
-    LoginScreen(onNavigate = {})
+    LoginScreen(null, {}, {})
 }

@@ -31,55 +31,55 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.triapp.TriAppTheme
+import com.triapp.TriColors
 import org.jetbrains.compose.ui.tooling.preview.Preview
-
-// ================== Cores e Estilos ==================
-object RatingColors {
-    val Background = Color(0xFF000000)
-    val CardBg = Color(0xFF1C1C1E)
-    val InputBg = Color(0xFF2C2C2E)
-    val White = Color(0xFFFFFFFF)
-    val GrayText = Color(0xFF8E8E93)
-    val DisabledButton = Color(0xFF3A3A3C)
-    val TagBg = Color(0xFF000000)
-}
+import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun TripRatingScreen(onFinished: () -> Unit) {
-    // Estados da tela
-    var rating by remember { mutableIntStateOf(0) } // 0 = Nenhuma estrela selecionada
-    var comment by remember { mutableStateOf("") }
-    var selectedTip by remember { mutableStateOf<String?>(null) }
+fun TripRatingFlowScreen(
+    onFinished: () -> Unit
+) {
+    val viewModel = koinViewModel<RatingViewModel>()
+    val uiState by viewModel.state.collectAsState()
+    val onAction: (RatingIntent) -> Unit = viewModel::processIntent
 
-    // Lista de Tags (Exemplo estático)
+    LaunchedEffect(Unit) {
+        viewModel.effect.collect { effect ->
+            when (effect) {
+                RatingEffect.Finished -> onFinished()
+                is RatingEffect.ShowToast -> { /* toast */ }
+            }
+        }
+    }
+
     val feedbackTags = listOf(
         "✨ Clean car", "🛡 Safe driving",
         "😊 Friendly", "🎵 Good music",
         "🗺 Best route", "❄️ AC on"
     )
-    val selectedTags = remember { mutableStateListOf<String>() }
 
     Scaffold(
-        containerColor = RatingColors.Background,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
             ) {
-                // Toggle de tema (decorativo)
                 IconButton(
                     onClick = { },
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
-                        .background(RatingColors.InputBg, CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
                         .size(40.dp)
                 ) {
-                    Icon(Icons.Outlined.WbSunny, null, tint = RatingColors.GrayText)
+                    Icon(Icons.Outlined.WbSunny, null, tint = MaterialTheme.colorScheme.secondary)
                 }
             }
         }
     ) { padding ->
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -88,100 +88,101 @@ fun TripRatingScreen(onFinished: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            // 1. Cabeçalho (Ícone de festa)
+            // Header
             Box(
                 modifier = Modifier
                     .size(80.dp)
-                    .background(RatingColors.White, RoundedCornerShape(20.dp)),
+                    .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(20.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Text("🎉", fontSize = 40.sp)
             }
+
             Spacer(modifier = Modifier.height(24.dp))
 
-            Text("Trip completed!", color = RatingColors.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Text("Trip completed!", color = MaterialTheme.colorScheme.primary, fontSize = 24.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(8.dp))
-            Text("How was your experience?", color = RatingColors.GrayText, fontSize = 16.sp)
+            Text("How was your experience?", color = MaterialTheme.colorScheme.secondary, fontSize = 16.sp)
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // 2. Card Principal
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
                 shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = RatingColors.CardBg)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Column(
                     modifier = Modifier.padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Info do Motorista
+
                     DriverInfoRow()
 
                     Spacer(modifier = Modifier.height(32.dp))
 
-                    // Estrelas
-                    Text("Rate the driver", color = RatingColors.GrayText, fontSize = 14.sp)
+                    Text("Rate the driver", color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
                     Spacer(modifier = Modifier.height(16.dp))
 
                     StarRatingBar(
-                        rating = rating,
-                        onRatingChanged = { newRating -> rating = newRating }
+                        rating = uiState.rating,
+                        onRatingChanged = { onAction(RatingIntent.SelectRating(it)) }
                     )
 
-                    // ==============================================================
-                    // ÁREA EXPANSÍVEL - Só aparece se rating > 0
-                    // ==============================================================
                     AnimatedVisibility(
-                        visible = rating > 0,
+                        visible = uiState.rating > 0,
                         enter = expandVertically(tween(300)) + fadeIn(tween(300)),
                         exit = shrinkVertically(tween(300)) + fadeOut(tween(300))
                     ) {
                         Column(horizontalAlignment = Alignment.Start) {
+
                             Spacer(modifier = Modifier.height(32.dp))
 
-                            // Tags
-                            Text("What did you like most?", color = RatingColors.GrayText, fontSize = 14.sp)
+                            Text("What did you like most?", color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
                             Spacer(modifier = Modifier.height(12.dp))
 
-                            // Grid simples de Tags
-                            FlowLayoutLikeRow(tags = feedbackTags, selectedTags = selectedTags) { tag ->
-                                if (selectedTags.contains(tag)) selectedTags.remove(tag) else selectedTags.add(tag)
+                            FlowLayoutLikeRow(
+                                tags = feedbackTags,
+                                selectedTags = uiState.selectedTags
+                            ) { tag ->
+                                onAction(RatingIntent.ToggleTag(tag))
                             }
 
                             Spacer(modifier = Modifier.height(24.dp))
 
-                            // Comentário
-                            Text("Leave a comment (optional)", color = RatingColors.GrayText, fontSize = 14.sp)
+                            Text("Leave a comment (optional)", color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
                             Spacer(modifier = Modifier.height(12.dp))
 
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(100.dp)
-                                    .background(RatingColors.InputBg, RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
                                     .padding(16.dp)
                             ) {
-                                if (comment.isEmpty()) {
-                                    Text("Tell us more about your trip...", color = RatingColors.GrayText.copy(alpha = 0.5f))
+                                if (uiState.comment.isEmpty()) {
+                                    Text(
+                                        "Tell us more about your trip...",
+                                        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
+                                    )
                                 }
                                 BasicTextField(
-                                    value = comment,
-                                    onValueChange = { comment = it },
-                                    textStyle = TextStyle(color = RatingColors.White, fontSize = 14.sp),
+                                    value = uiState.comment,
+                                    onValueChange = {
+                                        onAction(RatingIntent.UpdateComment(it))
+                                    },
+                                    textStyle = TextStyle(color = MaterialTheme.colorScheme.primary, fontSize = 14.sp),
                                     modifier = Modifier.fillMaxSize()
                                 )
                             }
 
                             Spacer(modifier = Modifier.height(24.dp))
 
-                            // Gorjeta (Tips)
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .background(RatingColors.InputBg, RoundedCornerShape(16.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(16.dp))
                                     .padding(16.dp)
                             ) {
                                 Column {
@@ -189,42 +190,50 @@ fun TripRatingScreen(onFinished: () -> Unit) {
                                         Text("💝", fontSize = 16.sp)
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Column {
-                                            Text("Add a tip", color = RatingColors.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                            Text("Reward good service", color = RatingColors.GrayText, fontSize = 12.sp)
+                                            Text("Add a tip", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                            Text("Reward good service", color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
                                         }
                                     }
+
                                     Spacer(modifier = Modifier.height(16.dp))
+
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-                                        // Passe o Modifier.weight(1f) aqui, pois estamos dentro de uma Row
-                                        TipButton("R$ 2", selectedTip == "2", Modifier.weight(1f)) { selectedTip = "2" }
-                                        TipButton("R$ 5", selectedTip == "5", Modifier.weight(1f)) { selectedTip = "5" }
-                                        TipButton("R$ 10", selectedTip == "10", Modifier.weight(1f)) { selectedTip = "10" }
-                                        TipButton("Other", selectedTip == "Other", Modifier.weight(1f)) { selectedTip = "Other" }
+                                        TipButton("R$ 2", uiState.selectedTip == "2", Modifier.weight(1f)) {
+                                            onAction(RatingIntent.SelectTip("2"))
+                                        }
+                                        TipButton("R$ 5", uiState.selectedTip == "5", Modifier.weight(1f)) {
+                                            onAction(RatingIntent.SelectTip("5"))
+                                        }
+                                        TipButton("R$ 10", uiState.selectedTip == "10", Modifier.weight(1f)) {
+                                            onAction(RatingIntent.SelectTip("10"))
+                                        }
+                                        TipButton("Other", uiState.selectedTip == "Other", Modifier.weight(1f)) {
+                                            onAction(RatingIntent.SelectTip("Other"))
+                                        }
                                     }
                                 }
                             }
                         }
-                    } // Fim do AnimatedVisibility
+                    }
 
                     Spacer(modifier = Modifier.height(32.dp))
 
-                    // Botão Principal (Muda de estado)
                     Button(
-                        onClick = { if (rating > 0) onFinished() },
+                        onClick = { onAction(RatingIntent.Submit) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),
                         shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (rating > 0) RatingColors.White else RatingColors.DisabledButton,
-                            contentColor = if (rating > 0) Color.Black else RatingColors.GrayText
+                            containerColor = if (uiState.rating > 0) MaterialTheme.colorScheme.primary else TriColors.ButtonGray,
+                            contentColor = if (uiState.rating > 0) Color.Black else MaterialTheme.colorScheme.secondary
                         )
                     ) {
                         Text(
-                            text = if (rating > 0) "Submit rating" else "Select a rating",
+                            text = if (uiState.rating > 0) "Submit rating" else "Select a rating",
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp
                         )
@@ -234,11 +243,14 @@ fun TripRatingScreen(onFinished: () -> Unit) {
 
                     Text(
                         text = "Skip",
-                        color = RatingColors.GrayText,
-                        modifier = Modifier.clickable { onFinished() }
+                        color = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.clickable {
+                            onAction(RatingIntent.Skip)
+                        }
                     )
                 }
             }
+
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
@@ -253,7 +265,7 @@ fun DriverInfoRow() {
         Box(
             modifier = Modifier
                 .size(48.dp)
-                .background(RatingColors.White, RoundedCornerShape(12.dp)),
+                .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp)),
             contentAlignment = Alignment.Center
         ) {
             Text("👨‍✈️", fontSize = 24.sp)
@@ -263,14 +275,14 @@ fun DriverInfoRow() {
 
         // Info
         Column(modifier = Modifier.weight(1f)) {
-            Text("Carlos Silva", color = RatingColors.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            Text("Toyota Corolla • ABC-1234", color = RatingColors.GrayText, fontSize = 12.sp)
+            Text("Carlos Silva", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Text("Toyota Corolla • ABC-1234", color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
         }
 
         // Preço
         Column(horizontalAlignment = Alignment.End) {
-            Text("R$ 15.90", color = RatingColors.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            Text("8 min", color = RatingColors.GrayText, fontSize = 12.sp)
+            Text("R$ 15.90", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Text("8 min", color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
         }
     }
 }
@@ -285,7 +297,7 @@ fun StarRatingBar(rating: Int, onRatingChanged: (Int) -> Unit) {
             Icon(
                 imageVector = Icons.Default.Star,
                 contentDescription = "Star $i",
-                tint = if (i <= rating) RatingColors.White else Color(0xFF3A3A3C), // Branco se selecionado, Cinza escuro se vazio
+                tint = if (i <= rating) MaterialTheme.colorScheme.primary else Color(0xFF3A3A3C), // Branco se selecionado, Cinza escuro se vazio
                 modifier = Modifier
                     .size(40.dp)
                     .clickable { onRatingChanged(i) }
@@ -306,7 +318,7 @@ fun TipButton(
         modifier = modifier
             .height(36.dp)
             .background(
-                if (isSelected) RatingColors.White else RatingColors.InputBg.copy(alpha = 0.5f),
+                if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                 RoundedCornerShape(8.dp)
             )
             .clickable { onClick() },
@@ -314,7 +326,7 @@ fun TipButton(
     ) {
         Text(
             text,
-            color = if (isSelected) Color.Black else RatingColors.GrayText,
+            color = if (isSelected) Color.Black else MaterialTheme.colorScheme.secondary,
             fontSize = 12.sp,
             fontWeight = FontWeight.SemiBold
         )
@@ -351,12 +363,12 @@ fun TagChip(text: String, isSelected: Boolean, modifier: Modifier = Modifier, on
         modifier = modifier
             .height(36.dp)
             .background(
-                color = RatingColors.TagBg, // Fundo preto puro como na imagem
+                color = MaterialTheme.colorScheme.background, // Fundo preto puro como na imagem
                 shape = RoundedCornerShape(8.dp)
             )
             .border(
                 width = 1.dp,
-                color = if(isSelected) RatingColors.White else RatingColors.InputBg, // Borda acende se selecionado
+                color = if(isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant, // Borda acende se selecionado
                 shape = RoundedCornerShape(8.dp)
             )
             .clickable { onClick() }
@@ -365,7 +377,7 @@ fun TagChip(text: String, isSelected: Boolean, modifier: Modifier = Modifier, on
     ) {
         Text(
             text,
-            color = if (isSelected) RatingColors.White else RatingColors.GrayText,
+            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium,
             maxLines = 1
@@ -376,5 +388,5 @@ fun TagChip(text: String, isSelected: Boolean, modifier: Modifier = Modifier, on
 @Preview
 @Composable
 fun RatingPreview() {
-    TripRatingScreen {}
+    TripRatingFlowScreen {}
 }

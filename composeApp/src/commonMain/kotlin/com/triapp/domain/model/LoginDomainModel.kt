@@ -9,7 +9,6 @@ data class LoginDomainModel(
     val email: String = "",
     val phone: String = "",
     val password: String = "",
-    val resetCode: String = "",
     val isLoading: Boolean = false,
     val error: String? = null,
     val showForgotPasswordModal: Boolean = false

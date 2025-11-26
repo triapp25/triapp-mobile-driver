@@ -18,14 +18,12 @@ class LoginViewModel(
     override fun processIntent(intent: LoginIntent) {
         when (intent) {
             is LoginIntent.EnterEmail -> updateState { it.copy(email = intent.email) }
-            is LoginIntent.SubmitPhone -> updateState { it.copy(phone = intent.phone) }
             is LoginIntent.RequestPasswordReset -> updateState { it.copy(password = intent.password) }
-            is LoginIntent.VerifyCode -> updateState { it.copy(resetCode = intent.code) }
-            is LoginIntent.SubmitLogin -> requestPhoneCode(intent.activity)
+            is LoginIntent.VerifyCode -> verifyCode(intent.code)
+            is LoginIntent.SubmitLogin -> requestPhoneCode(intent.activity, intent.phone)
+            is LoginIntent.SendResetCode -> sendResetCode(intent.activity)
             LoginIntent.OpenForgotPassword -> sendEffect(LoginEffect.ShowForgotPassword)
             LoginIntent.DismissForgotPassword -> sendEffect(LoginEffect.HideForgotPassword)
-            LoginIntent.SendResetCode -> sendResetCode()
-            LoginIntent.VerifyResetCode -> verifyCode()
             LoginIntent.BackToLogin -> backToLogin()
             LoginIntent.NavigateToSignup -> { sendEffect(LoginEffect.NavigateToSignup) }
 
@@ -33,15 +31,15 @@ class LoginViewModel(
     }
 
 
-    private fun requestPhoneCode(activity: Any?) {
+    private fun requestPhoneCode(activity: Any?, phone: String) {
         viewModelScope.launch {
             updateState { it.copy(isLoading = true) }
-
-            val result = firebaseManager.requestPhoneCode(state.value.phone, activity)
+            val digits = phone.filter { it.isDigit() }
+            val result = firebaseManager.requestPhoneCode(digits, activity)
 
             if (result.isSuccess) {
                 phoneVerificationId = result.getOrNull()
-                updateState { it.copy(step = LoginStep.ResetCode) }
+                updateState { it.copy(phone = phone, step = LoginStep.ResetCode) }
                 sendEffect(LoginEffect.ShowSnackbar("SMS enviado"))
             } else {
                 sendEffect(LoginEffect.ShowError("Erro ao enviar SMS"))
@@ -51,14 +49,16 @@ class LoginViewModel(
         }
     }
 
-    private fun sendResetCode() {
+    private fun sendResetCode(activity: Any?) {
         viewModelScope.launch {
             updateState { it.copy(isLoading = true) }
 
-            val result = firebaseManager.sendPasswordReset(state.value.email)
+            val digits = state.value.phone.filter { it.isDigit() }
+            val result = firebaseManager.requestPhoneCode(digits, activity)
+
             if (result.isSuccess) {
-                sendEffect(LoginEffect.ShowSnackbar("Reset link sent"))
-                sendEffect(LoginEffect.NavigateToHome)
+                phoneVerificationId = result.getOrNull()
+                sendEffect(LoginEffect.ShowSnackbar("SMS enviado"))
             } else {
                 sendEffect(LoginEffect.ShowError(result.exceptionOrNull()?.message ?: "Failed to send reset link"))
             }
@@ -67,12 +67,11 @@ class LoginViewModel(
         }
     }
 
-    private fun verifyCode() {
+    private fun verifyCode(code: String) {
         viewModelScope.launch {
             updateState { it.copy(isLoading = true) }
 
             val id = phoneVerificationId ?: return@launch
-            val code = state.value.resetCode
 
             val result = firebaseManager.verifyPhoneCode(id, code)
             if (result.isSuccess) {
@@ -88,7 +87,6 @@ class LoginViewModel(
     }
 
     private fun backToLogin() {
-
         updateState {  it.copy(step = LoginStep.Login) }
         sendEffect(LoginEffect.BackToLogin)
     }
