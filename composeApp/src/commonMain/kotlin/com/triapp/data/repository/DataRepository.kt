@@ -1,13 +1,19 @@
 package com.triapp.data.repository
 
 import com.triapp.data.ApiService
+import com.triapp.data.dtos.CardBody
+import com.triapp.data.dtos.RatingBody
 import com.triapp.data.dtos.StartTaxiBody
 import com.triapp.domain.model.LatLng
 import com.triapp.domain.model.ProductDomainModel
+import com.triapp.domain.model.RatingDomainModel
+import com.triapp.domain.model.WalletDomainModel
 
 interface DataRepository {
     suspend fun fetchProducts(): List<ProductDomainModel>
+    suspend fun sendRating(model: RatingDomainModel)
     suspend fun startTaxi(): String
+    suspend fun cardOptions(model: WalletDomainModel): WalletDomainModel
 }
 
 
@@ -16,7 +22,6 @@ class DataRepositoryImpl(
 ) : DataRepository {
 
     override suspend fun fetchProducts(): List<ProductDomainModel> {
-        // Mapeamento de DTO para Domínio
         return apiService.getProducts().map { productDto ->
             ProductDomainModel(
                 id = productDto.id,
@@ -28,6 +33,17 @@ class DataRepositoryImpl(
         }
     }
 
+    override suspend fun sendRating(model: RatingDomainModel) {
+        return apiService.sendRating(
+            RatingBody(
+                rating = model.rating,
+                comment = model.comment,
+                selectedTags = model.selectedTags,
+                selectedTip = model.selectedTip
+            )
+        )
+    }
+
     override suspend fun startTaxi(): String {
         return apiService.startTaxi(
             StartTaxiBody(
@@ -35,5 +51,23 @@ class DataRepositoryImpl(
                 latLngEnd = LatLng(1.0, 1.0)
             )
         )
+    }
+
+    override suspend fun cardOptions(model: WalletDomainModel): WalletDomainModel {
+        val body = CardBody(
+            model.title,
+            model.subtitle,
+            model.extraInfo.orEmpty(),
+            model.isDefault
+        )
+
+        when (model.cardOption) {
+            WalletDomainModel.CardOption.CREATE -> apiService.createCard(body)
+            WalletDomainModel.CardOption.UPDATED -> apiService.updateCard(body)
+            WalletDomainModel.CardOption.DELETE -> apiService.deleteCard(body)
+            WalletDomainModel.CardOption.ANOTHER -> apiService.getCards()
+        }
+
+        return model
     }
 }

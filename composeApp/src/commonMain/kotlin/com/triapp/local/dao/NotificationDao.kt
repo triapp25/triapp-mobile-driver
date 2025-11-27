@@ -19,14 +19,14 @@ interface NotificationDao {
     /**
      * Retorna um Flow de todas as notificações não lidas para o Tenant atual.
      */
-    @Query("SELECT * FROM notifications WHERE tenantId = :tenantId AND isRead = 0 ORDER BY timestamp DESC")
-    fun getUnreadNotificationsByTenant(tenantId: String): Flow<List<NotificationEntity>>
+    @Query("SELECT * FROM notifications WHERE isRead = 0 ORDER BY timestamp DESC")
+    fun getUnreadNotificationsByTenant(): Flow<List<NotificationEntity>>
 
     /**
      * Retorna todas as notificações, lidas e não lidas.
      */
-    @Query("SELECT * FROM notifications WHERE tenantId = :tenantId ORDER BY timestamp DESC")
-    fun getAllNotificationsByTenant(tenantId: String): Flow<List<NotificationEntity>>
+    @Query("SELECT * FROM notifications ORDER BY timestamp DESC")
+    fun getAllNotificationsByTenant(): Flow<List<NotificationEntity>>
 
     /**
      * Marca uma notificação específica como lida.
@@ -37,6 +37,6 @@ interface NotificationDao {
     /**
      * Limpa todas as notificações de um Tenant específico.
      */
-    @Query("DELETE FROM notifications WHERE tenantId = :tenantId")
-    suspend fun clearAll(tenantId: String)
+    @Query("DELETE FROM notifications")
+    suspend fun clearAll()
 }

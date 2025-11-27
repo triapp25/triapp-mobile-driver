@@ -1,13 +1,7 @@
 package com.triapp.presentation.feature.profile
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -18,6 +12,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -29,17 +24,18 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import com.triapp.domain.model.RideHistoryDomainModel
+import com.triapp.domain.model.WalletDomainModel
 import org.koin.compose.viewmodel.koinViewModel
 
-@OptIn(ExperimentalAnimationApi::class)
+@OptIn(ExperimentalAnimationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileFlowScreen(
     onBack: () -> Unit,
@@ -48,6 +44,11 @@ fun ProfileFlowScreen(
     val viewModel = koinViewModel<ProfileViewModel>()
     val uiState by viewModel.state.collectAsState()
     val onAction: (ProfileIntent) -> Unit = viewModel::processIntent
+
+    // --- ESTADOS LOCAIS PARA CONTROLAR OS BOTTOM SHEETS ---
+    var showAddCardSheet by remember { mutableStateOf(false) }
+    var cardToDelete by remember { mutableStateOf<WalletDomainModel?>(null) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
@@ -91,15 +92,60 @@ fun ProfileFlowScreen(
                     onLogout = { onAction(ProfileIntent.Logout) }
                 )
 
-                ProfileStep.Wallet -> WalletScreen()
+                ProfileStep.Wallet -> WalletScreen(
+                    balance = uiState.walletBalance,
+                    walletList = uiState.walletList,
+                    onAddCard = { showAddCardSheet = true }, // Abre o Sheet de Adicionar
+                    onDelete = { card -> cardToDelete = card } // Abre o Sheet de Deletar
+                )
 
-                ProfileStep.History -> HistoryScreen()
+                ProfileStep.History -> HistoryScreen(
+                    totalRides = uiState.historyTotalRides,
+                    totalSpent = uiState.historyTotalSpent,
+                    rating = uiState.historyRating,
+                    historyList = uiState.rideHistory
+                )
+            }
+        }
+
+        // --- BOTTOM SHEET DE ADICIONAR CARTÃO ---
+        if (showAddCardSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showAddCardSheet = false },
+                sheetState = sheetState,
+                containerColor = MaterialTheme.colorScheme.surface
+            ) {
+                AddCardBottomSheetContent(
+                    onCancel = { showAddCardSheet = false },
+                    onSave = { cardNumber, cardName ->
+                        // Aqui você enviaria o Intent para o ViewModel
+                        // onAction(ProfileIntent.AddNewCard(...))
+                        showAddCardSheet = false
+                    }
+                )
+            }
+        }
+
+        // --- BOTTOM SHEET DE CONFIRMAÇÃO DE DELETE ---
+        if (cardToDelete != null) {
+            ModalBottomSheet(
+                onDismissRequest = { cardToDelete = null },
+                sheetState = sheetState,
+                containerColor = MaterialTheme.colorScheme.surface
+            ) {
+                DeleteConfirmationSheetContent(
+                    card = cardToDelete!!,
+                    onCancel = { cardToDelete = null },
+                    onConfirm = {
+                        onAction(ProfileIntent.DeleteCard(cardToDelete!!))
+                        cardToDelete = null
+                    }
+                )
             }
         }
     }
 }
 
-// ================== TELA 1: PERFIL PRINCIPAL ==================
 @Composable
 fun ProfileMainScreen(
     name: String,
@@ -123,11 +169,21 @@ fun ProfileMainScreen(
                 .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(24.dp)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Outlined.Person, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(50.dp))
+            Icon(
+                Icons.Outlined.Person,
+                null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(50.dp)
+            )
         }
 
         Spacer(modifier = Modifier.height(16.dp))
-        Text(name, color = MaterialTheme.colorScheme.primary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Text(
+            name,
+            color = MaterialTheme.colorScheme.primary,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold
+        )
 
         Spacer(modifier = Modifier.height(32.dp))
 
@@ -169,16 +225,156 @@ fun ProfileMainScreen(
     }
 }
 
-// ================== TELA 2: CARTEIRA ==================
+// ================== CONTEÚDO DOS SHEETS ==================
+
 @Composable
-fun WalletScreen() {
+fun AddCardBottomSheetContent(
+    onCancel: () -> Unit,
+    onSave: (String, String) -> Unit
+) {
+    var cardNumber by remember { mutableStateOf("") }
+    var cardName by remember { mutableStateOf("") }
+    var expiry by remember { mutableStateOf("") }
+    var cvv by remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(24.dp)
+            .padding(bottom = 32.dp) // Espaço extra para a barra de navegação
+    ) {
+        Text("Adicionar novo cartão", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+        Spacer(modifier = Modifier.height(24.dp))
+
+        OutlinedTextField(
+            value = cardNumber,
+            onValueChange = { cardNumber = it },
+            label = { Text("Número do cartão") },
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            shape = RoundedCornerShape(12.dp)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = cardName,
+            onValueChange = { cardName = it },
+            label = { Text("Nome do titular") },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            OutlinedTextField(
+                value = expiry,
+                onValueChange = { expiry = it },
+                label = { Text("Validade (MM/AA)") },
+                modifier = Modifier.weight(1f),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                shape = RoundedCornerShape(12.dp)
+            )
+            OutlinedTextField(
+                value = cvv,
+                onValueChange = { cvv = it },
+                label = { Text("CVV") },
+                modifier = Modifier.weight(1f),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                shape = RoundedCornerShape(12.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Button(
+            onClick = { onSave(cardNumber, cardName) },
+            modifier = Modifier.fillMaxWidth().height(50.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+        ) {
+            Text("Salvar Cartão", color = Color.Black, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+fun DeleteConfirmationSheetContent(
+    card: WalletDomainModel,
+    onCancel: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(24.dp)
+            .padding(bottom = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .size(60.dp)
+                .background(MaterialTheme.colorScheme.error.copy(alpha = 0.1f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(Icons.Outlined.DeleteForever, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(32.dp))
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "Remover cartão?",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = "Tem certeza que deseja remover o cartão ${card.title} terminado em ${card.subtitle}?",
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.secondary
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedButton(
+                onClick = onCancel,
+                modifier = Modifier.weight(1f).height(50.dp),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+            ) {
+                Text("Cancelar", color = MaterialTheme.colorScheme.primary)
+            }
+
+            Button(
+                onClick = onConfirm,
+                modifier = Modifier.weight(1f).height(50.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) {
+                Text("Remover", color = Color.White, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+// ================== TELA 2: CARTEIRA (ATUALIZADA) ==================
+@Composable
+fun WalletScreen(
+    balance: String,
+    walletList: List<WalletDomainModel>,
+    onAddCard: () -> Unit, // Novo callback
+    onDelete: (WalletDomainModel) -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 24.dp)
             .verticalScroll(rememberScrollState())
     ) {
-        // Card de Saldo (Branco)
+        // Card de Saldo
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(24.dp),
@@ -187,28 +383,7 @@ fun WalletScreen() {
             Column(modifier = Modifier.padding(24.dp)) {
                 Text("Saldo disponível", color = Color.Gray, fontSize = 14.sp)
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("R$ 45.00", color = Color.Black, fontSize = 32.sp, fontWeight = FontWeight.Bold)
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Button(
-                        onClick = {},
-                        modifier = Modifier.weight(1f).height(45.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
-                        shape = RoundedCornerShape(24.dp)
-                    ) {
-                        Text("Adicionar saldo", fontWeight = FontWeight.Bold)
-                    }
-                    Button(
-                        onClick = {},
-                        modifier = Modifier.weight(1f).height(45.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE5E5EA)),
-                        shape = RoundedCornerShape(24.dp)
-                    ) {
-                        Text("Sacar", color = Color.Black, fontWeight = FontWeight.Bold)
-                    }
-                }
+                Text(balance, color = Color.Black, fontSize = 32.sp, fontWeight = FontWeight.Bold)
             }
         }
 
@@ -220,9 +395,13 @@ fun WalletScreen() {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Formas de pagamento", color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
+            Text(
+                "Formas de pagamento",
+                color = MaterialTheme.colorScheme.secondary,
+                fontSize = 14.sp
+            )
             Button(
-                onClick = {},
+                onClick = onAddCard, // Chama o callback para abrir o sheet
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
                 modifier = Modifier.height(32.dp)
@@ -235,59 +414,44 @@ fun WalletScreen() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Lista de Cartões
-        PaymentMethodItem(
-            icon = Icons.Default.CreditCard,
-            color = Color(0xFF4B89FF),
-            title = "Visa",
-            subtitle = "•••• 4242",
-            extraInfo = "Crédito",
-            isDefault = true
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        PaymentMethodItem(
-            icon = Icons.Default.CreditCard,
-            color = Color(0xFFA855F7),
-            title = "Mastercard",
-            subtitle = "•••• 8888",
-            extraInfo = "Débito",
-            isSelected = true
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        PaymentMethodItem(
-            icon = Icons.Default.QrCode,
-            color = Color(0xFF2DD4BF),
-            title = "PIX",
-            subtitle = "PIX",
-            extraInfo = null,
-            isSelected = true
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        PaymentMethodItem(
-            icon = Icons.Default.AttachMoney,
-            color = Color(0xFF22C55E),
-            title = "Dinheiro",
-            subtitle = "Dinheiro",
-            extraInfo = null,
-            isSelected = true
-        )
+        LazyColumn(
+            modifier = Modifier.heightIn(max = 1000.dp)
+        ) {
+            items(walletList) {
+                PaymentMethodItem(
+                    icon = it.icon,
+                    color = it.color,
+                    title = it.title,
+                    subtitle = it.subtitle,
+                    extraInfo = it.extraInfo,
+                    isDefault = it.isDefault,
+                    onDelete = { onDelete(it) }
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+        }
     }
 }
 
 // ================== TELA 3: HISTÓRICO ==================
 @Composable
-fun HistoryScreen() {
+fun HistoryScreen(
+    totalRides: String,
+    totalSpent: String,
+    rating: String,
+    historyList: List<RideHistoryDomainModel>
+) {
     Column(modifier = Modifier.fillMaxSize()) {
-        // Stats do Histórico
+        // Stats do Histórico (DADOS DINÂMICOS)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            StatCard(Modifier.weight(1f), "5", "Corridas")
-            StatCard(Modifier.weight(1f), "R$ 108.90", "Total gasto")
-            StatCard(Modifier.weight(1f), "★ 4.8", "Média")
+            StatCard(Modifier.weight(1f), totalRides, "Corridas")
+            StatCard(Modifier.weight(1f), totalSpent, "Total gasto")
+            StatCard(Modifier.weight(1f), rating, "Média")
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -303,13 +467,13 @@ fun HistoryScreen() {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Lista de Corridas
+        // Lista de Corridas (DADOS DINÂMICOS)
         LazyColumn(
             contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            items(3) { index ->
-                RideHistoryItem(index)
+            items(historyList) { historyItem ->
+                RideHistoryItem(historyItem)
             }
         }
     }
@@ -327,10 +491,19 @@ fun ProfileTopBar(title: String, subtitle: String, onBack: () -> Unit) {
                 .clickable { onBack() },
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = MaterialTheme.colorScheme.primary)
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowBack,
+                null,
+                tint = MaterialTheme.colorScheme.primary
+            )
         }
         Spacer(modifier = Modifier.height(16.dp))
-        Text(title, color = MaterialTheme.colorScheme.primary, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text(
+            title,
+            color = MaterialTheme.colorScheme.primary,
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold
+        )
         Text(subtitle, color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
         Spacer(modifier = Modifier.height(16.dp))
     }
@@ -344,7 +517,12 @@ fun StatCard(modifier: Modifier, value: String, label: String) {
             .padding(vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(value, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+        Text(
+            value,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Bold,
+            fontSize = 16.sp
+        )
         Text(label, color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
     }
 }
@@ -387,7 +565,11 @@ fun MenuButton(icon: ImageVector, title: String, subtitle: String, onClick: () -
             Text(title, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
             Text(subtitle, color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
         }
-        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.secondary)
+        Icon(
+            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            null,
+            tint = MaterialTheme.colorScheme.secondary
+        )
     }
 }
 
@@ -399,7 +581,8 @@ fun PaymentMethodItem(
     subtitle: String,
     extraInfo: String?,
     isDefault: Boolean = false,
-    isSelected: Boolean = false
+    isSelected: Boolean = false,
+    onDelete: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -430,7 +613,12 @@ fun PaymentMethodItem(
                             .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(4.dp))
                             .padding(horizontal = 4.dp, vertical = 2.dp)
                     ) {
-                        Text("Padrão", fontSize = 10.sp, color = Color.Black, fontWeight = FontWeight.Bold)
+                        Text(
+                            "Padrão",
+                            fontSize = 10.sp,
+                            color = Color.Black,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
@@ -439,7 +627,6 @@ fun PaymentMethodItem(
             }
         }
 
-        // Ações (Check ou Lixeira)
         if (isSelected) {
             Box(
                 modifier = Modifier
@@ -447,7 +634,12 @@ fun PaymentMethodItem(
                     .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(16.dp))
+                Icon(
+                    Icons.Default.Check,
+                    null,
+                    tint = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.size(16.dp)
+                )
             }
         }
 
@@ -455,11 +647,22 @@ fun PaymentMethodItem(
 
         Box(
             modifier = Modifier
+                .clickable {
+                    onDelete()
+                }
                 .size(32.dp)
-                .background(MaterialTheme.colorScheme.error.copy(alpha = 0.2f), RoundedCornerShape(8.dp)),
+                .background(
+                    MaterialTheme.colorScheme.error.copy(alpha = 0.2f),
+                    RoundedCornerShape(8.dp)
+                ),
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Outlined.Delete, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
+            Icon(
+                Icons.Outlined.Delete,
+                null,
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(16.dp)
+            )
         }
     }
 }
@@ -484,7 +687,7 @@ fun FilterChip(text: String, selected: Boolean) {
 }
 
 @Composable
-fun RideHistoryItem(index: Int) {
+fun RideHistoryItem(item: RideHistoryDomainModel) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(16.dp),
@@ -492,9 +695,21 @@ fun RideHistoryItem(index: Int) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             // Header
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(if(index == 0) "06 Nov 2025 • 14:30" else "05 Nov 2025 • 09:15", color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
-                Row { repeat(5) { Icon(Icons.Default.Star, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(12.dp)) } }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(item.date, color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
+                Row {
+                    repeat(5) {
+                        Icon(
+                            Icons.Default.Star,
+                            null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(12.dp)
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -502,45 +717,78 @@ fun RideHistoryItem(index: Int) {
             // Route
             Row {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Outlined.RadioButtonUnchecked, null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(16.dp))
-                    Box(modifier = Modifier.width(1.dp).height(24.dp).background(MaterialTheme.colorScheme.secondary))
-                    Icon(Icons.Outlined.LocationOn, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                    Icon(
+                        Icons.Outlined.RadioButtonUnchecked,
+                        null,
+                        tint = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Box(
+                        modifier = Modifier.width(1.dp).height(24.dp)
+                            .background(MaterialTheme.colorScheme.secondary)
+                    )
+                    Icon(
+                        Icons.Outlined.LocationOn,
+                        null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text("Origem", color = MaterialTheme.colorScheme.secondary, fontSize = 10.sp)
-                    Text(if(index == 0) "Rua Augusta, 2000" else "Av. Paulista, 1578", color = MaterialTheme.colorScheme.primary, fontSize = 14.sp)
+                    Text(item.origin, color = MaterialTheme.colorScheme.primary, fontSize = 14.sp)
                     Spacer(modifier = Modifier.height(12.dp))
                     Text("Destino", color = MaterialTheme.colorScheme.secondary, fontSize = 10.sp)
-                    Text(if(index == 0) "Shopping Iguatemi" else "Aeroporto de Congonhas", color = MaterialTheme.colorScheme.primary, fontSize = 14.sp)
+                    Text(
+                        item.destination,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 14.sp
+                    )
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-            Divider(color = MaterialTheme.colorScheme.outline, thickness = 1.dp)
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outline,
+                thickness = 1.dp
+            ) // Use HorizontalDivider no Material3
             Spacer(modifier = Modifier.height(16.dp))
 
             // Footer
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
                 Column {
                     Text("Motorista", color = MaterialTheme.colorScheme.secondary, fontSize = 10.sp)
-                    Text("Carlos Silva", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                    Text(
+                        item.driverName,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("4.2 km • 12 min", color = MaterialTheme.colorScheme.secondary, fontSize = 10.sp)
+                    Text(
+                        item.distanceTime,
+                        color = MaterialTheme.colorScheme.secondary,
+                        fontSize = 10.sp
+                    )
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text("Valor", color = MaterialTheme.colorScheme.secondary, fontSize = 10.sp)
-                    Text(if(index == 0) "R$ 15.90" else "R$ 32.50", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                    Text(
+                        item.price,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("Visa •••• 4242", color = MaterialTheme.colorScheme.secondary, fontSize = 10.sp)
+                    Text(
+                        item.paymentMethod,
+                        color = MaterialTheme.colorScheme.secondary,
+                        fontSize = 10.sp
+                    )
                 }
             }
         }
     }
-}
-
-@Preview
-@Composable
-fun ProfileFlowPreview() {
-    ProfileFlowScreen({},{})
 }

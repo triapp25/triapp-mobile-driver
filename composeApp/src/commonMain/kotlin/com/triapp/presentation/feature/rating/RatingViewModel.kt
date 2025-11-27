@@ -1,9 +1,14 @@
 package com.triapp.presentation.feature.rating
 
+import androidx.lifecycle.viewModelScope
 import com.triapp.domain.model.RatingDomainModel
+import com.triapp.domain.usecase.SendRatingUseCase
 import com.triapp.presentation.BaseViewModel
+import kotlinx.coroutines.launch
 
-class RatingViewModel :
+class RatingViewModel(
+    val useCase: SendRatingUseCase
+) :
     BaseViewModel<RatingDomainModel, RatingIntent, RatingEffect>(
         initialState = RatingDomainModel()
     ) {
@@ -36,7 +41,7 @@ class RatingViewModel :
 
             RatingIntent.Submit -> {
                 if (state.value.rating > 0) {
-                    sendEffect(RatingEffect.Finished)
+                    sendRating()
                 } else {
                     sendEffect(RatingEffect.ShowToast("Select a rating"))
                 }
@@ -45,6 +50,17 @@ class RatingViewModel :
             RatingIntent.Skip -> {
                 sendEffect(RatingEffect.Finished)
             }
+        }
+    }
+
+    private fun sendRating() {
+        viewModelScope.launch {
+            useCase.invoke(state.value)
+                .onFailure {
+                    // Processar resposta em outro momento
+                }.also {
+                    sendEffect(RatingEffect.Finished)
+                }
         }
     }
 }

@@ -6,6 +6,7 @@ import com.russhwolf.settings.coroutines.getStringOrNullFlow
 import com.triapp.domain.model.SignUpDomainModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.encodeToString // <--- ADICIONE ISTO
 
 class AppPreferences(
     private val settings: ObservableSettings,

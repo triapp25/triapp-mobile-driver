@@ -69,7 +69,9 @@ fun HomeScreenTwo(onNavigate: () -> Unit) {
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            ProfileFlowScreen({},{})
+            ProfileFlowScreen({
+                scope.launch { drawerState.close() }
+            },{})
         }
     ) {
         Scaffold(

@@ -1,56 +1,56 @@
 package com.triapp.di
 
+import androidx.room.RoomDatabase
+import androidx.sqlite.SQLiteDriver
 import com.russhwolf.settings.ObservableSettings
 import com.russhwolf.settings.Settings
 import com.triapp.data.ApiService
 import com.triapp.data.NetworkProvider
-import com.triapp.data.WebSocketProvider
 import com.triapp.data.repository.DataRepository
 import com.triapp.data.repository.DataRepositoryImpl
+import com.triapp.data.repository.RideRepository
+import com.triapp.data.repository.RideRepositoryImpl
+import com.triapp.domain.usecase.CardOptionsUseCase
 import com.triapp.domain.usecase.GetDataUseCase
+import com.triapp.domain.usecase.GetRideHistoryUseCase
 import com.triapp.domain.usecase.GetSignUpDraftUseCase
+import com.triapp.domain.usecase.SaveRideUseCase
 import com.triapp.domain.usecase.SaveSignUpDraftUseCase
+import com.triapp.domain.usecase.SendRatingUseCase
 import com.triapp.domain.usecase.TaxiUseCase
 import com.triapp.local.AppDatabase
-import com.triapp.local.AppDatabaseConstructor
 import com.triapp.local.AppPreferences
+import com.triapp.local.getRoomDatabase
 import com.triapp.local.provideObservableSettings
-import com.triapp.presentation.feature.home.DefaultMapController
 import com.triapp.presentation.feature.home.HomeViewModel
-import com.triapp.presentation.feature.home.MapController
 import com.triapp.presentation.feature.login.LoginViewModel
 import com.triapp.presentation.feature.profile.ProfileViewModel
 import com.triapp.presentation.feature.rating.RatingViewModel
 import com.triapp.presentation.feature.signup.SignupViewModel
 import com.triapp.utils.FirebaseAuthManager
 import com.triapp.utils.FirebaseServiceImpl
-import com.triapp.utils.LocationProvider
 import com.triapp.utils.LocationRepository
-import com.triapp.utils.TenantConfig
-import com.triapp.utils.TenantService
-import com.triapp.utils.getTenantService
-import org.koin.dsl.module
-import io.ktor.client.HttpClient
-import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.serialization.kotlinx.json.*
-import kotlinx.serialization.json.Json
 import de.jensklingenberg.ktorfit.Ktorfit
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.auth.auth
+import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngineFactory
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
-import io.ktor.client.request.header
+import io.ktor.serialization.kotlinx.json.json
+import kotlinx.serialization.json.Json
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.bind
+import org.koin.dsl.module
 
 expect fun getPlatformHttpClientEngineFactory(): HttpClientEngineFactory<*>
 
 val networkModule = module {
 
-    single { getPlatformHttpClientEngineFactory() }
+    single<HttpClientEngineFactory<*>> { getPlatformHttpClientEngineFactory() }
 
-    single { get<TenantService>().getCurrentTenantConfig() }
+//    single { get<TenantService>().getCurrentTenantConfig() }
 
     single {
         Json {
@@ -61,15 +61,16 @@ val networkModule = module {
     }
 
     single {
-        val config: TenantConfig = get<TenantConfig>()
-        HttpClient(get()) {
+        //val config: TenantConfig = get<TenantConfig>()
+        HttpClient(engineFactory = get<HttpClientEngineFactory<*>>()) {
             install(ContentNegotiation) {
                 json(get())
             }
             // Configuração Multi-Tenant no Ktor:
             defaultRequest {
-                url(config.baseUrl)
-                header("X-Tenant-Id", config.tenantId)
+                url("")
+                //url(config.baseUrl)
+                //header("X-Tenant-Id", config.tenantId)
             }
         }
     }
@@ -81,19 +82,11 @@ val networkModule = module {
             .build()
     }
 
-    // Service Ktorfit
     single<ApiService> { get<Ktorfit>().create() }
 
-    single<WebSocketProvider> {
-        val config: TenantConfig = get()
-        WebSocketProvider(config)
-    }
-
-    // NetworkProvider decide entre REST e WebSocket dinamicamente
     single<NetworkProvider> {
         NetworkProvider(
-            apiService = get(),
-            webSocketProvider = get()
+            apiService = get()
         )
     }
 }
@@ -108,6 +101,8 @@ val authModule = module {
 val repositoryModule = module {
     single<DataRepository> { DataRepositoryImpl(get()) }
     single { LocationRepository(get()) }
+    single<RideRepository> { RideRepositoryImpl(get()) }
+
     //single<MapController> { DefaultMapController() }
     //single<LocationProvider> { LocationProvider() }
 
@@ -118,29 +113,28 @@ val domainModule = module {
     single { TaxiUseCase(get()) }
     single { SaveSignUpDraftUseCase(get()) }
     single { GetSignUpDraftUseCase(get(), get()) }
+    single { SendRatingUseCase(get()) }
+    single { CardOptionsUseCase(get()) }
+    single { GetRideHistoryUseCase(get()) }
+    single { SaveRideUseCase(get()) }
 }
 
 val presentationModule = module {
     viewModel { SignupViewModel(get()) }
     viewModel { LoginViewModel(get()) }
     viewModel { HomeViewModel(get()) }
-    viewModel { ProfileViewModel() }
-    viewModel { RatingViewModel() }
+    viewModel { ProfileViewModel(get(), get(), get()) }
+    viewModel { RatingViewModel(get()) }
 }
 
 val storageModule = module {
-    // Multiplatform Settings
-    single<ObservableSettings> { provideObservableSettings() }
-
-    single<TenantService> { getTenantService() }
 
     single { Settings() }
     single { AppPreferences(get(), get()) }
 
-
-
-    // Room Database
-    single { get<AppDatabaseConstructor>().initialize() }
+    single<AppDatabase> {
+        getRoomDatabase(get())
+    }
 
     // DAOs
     single { get<AppDatabase>().notificationDao() }

@@ -11,10 +11,18 @@ plugins {
     alias(libs.plugins.firebase.crashlytics.plugin)
     alias(libs.plugins.kotlinSerialization)
     id("org.jetbrains.kotlin.native.cocoapods")
+
+    // --- CORREÇÃO 1: PLUGINS NECESSÁRIOS ---
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.ktorfit)
 }
 
 room {
     schemaDirectory("$projectDir/schemas")
+}
+
+ktorfit {
+    generateQualifiedTypeName = true
 }
 
 kotlin {
@@ -62,7 +70,6 @@ kotlin {
         }
     }
 
-
     sourceSets {
         androidMain.dependencies {
             implementation(compose.preview)
@@ -72,19 +79,15 @@ kotlin {
             implementation(libs.google.firebase.crashlytics)
             implementation(libs.google.firebase.messaging)
             implementation(libs.ktor.client.android)
-            implementation(libs.androidx.room.sqlite.wrapper)
             implementation(libs.androidx.core.splashscreen)
             implementation(libs.play.services.location)
             implementation(libs.multiplatform.settings.coroutines)
             implementation(libs.android.ndk27)
             implementation(libs.maps.compose.ndk27)
-
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
             implementation(libs.kotlinx.coroutines.core)
-
-
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -100,13 +103,15 @@ kotlin {
             implementation(libs.koin.compose.viewmodel.nav)
             implementation(libs.kamel.image)
 
+            // Ktorfit Library
             implementation(libs.ktorfit.lib)
+
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.contentNegotiation)
             implementation(libs.ktor.serialization.kotlinxJson)
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.filekit.core)
-            implementation(libs.filekit.dialogs.compose)
+            implementation(libs.filekit.compose)
 
             implementation(libs.firebase.common)
             implementation(libs.firebase.auth)
@@ -115,12 +120,11 @@ kotlin {
             implementation(libs.firebase.firestore)
 
             implementation(libs.room.runtime)
-            implementation(libs.room.sqlite.bundled)
+            implementation(libs.sqlite.bundled)
 
             implementation(libs.multiplatform.settings.core)
             implementation(libs.multiplatform.settings.no.arg)
             implementation(libs.multiplatform.settings.coroutines)
-
 
             implementation(libs.permissions.location)
             implementation(libs.permissions.v0201)
@@ -129,13 +133,8 @@ kotlin {
             implementation(libs.geo.compose)
             implementation(compose.materialIconsExtended)
 
-
-
-
             implementation(libs.permissions)
-            implementation(libs.geo)
-
-
+            // implementation(libs.geo) // Removido duplicado
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -175,6 +174,27 @@ android {
     }
 }
 
+// --- CORREÇÃO 3: DEPENDÊNCIAS DO KSP ---
+// Isso garante que o código do Ktorfit seja gerado para todas as plataformas
 dependencies {
     debugImplementation(compose.uiTooling)
+
+    // --- KTORFIT KSP ---
+    // Pega a versão automaticamente do TOML para não quebrar se você atualizar
+    val ktorfitVersion = libs.versions.ktorfit.get()
+    val ktorfitKsp = "de.jensklingenberg.ktorfit:ktorfit-ksp:$ktorfitVersion"
+
+    add("kspCommonMainMetadata", ktorfitKsp)
+    add("kspAndroid", ktorfitKsp)
+    add("kspIosX64", ktorfitKsp)
+    add("kspIosArm64", ktorfitKsp)
+    add("kspIosSimulatorArm64", ktorfitKsp)
+
+    // --- ROOM KSP (FALTAVA ISSO!) ---
+    // O Room precisa disso para gerar o código do banco de dados
+    //add("kspCommonMainMetadata", libs.room.compiler)
+    add("kspAndroid", libs.room.compiler)
+    add("kspIosX64", libs.room.compiler)
+    add("kspIosArm64", libs.room.compiler)
+    add("kspIosSimulatorArm64", libs.room.compiler)
 }

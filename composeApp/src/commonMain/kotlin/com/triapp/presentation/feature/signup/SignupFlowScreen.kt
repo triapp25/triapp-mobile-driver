@@ -37,10 +37,8 @@ import com.triapp.presentation.feature.login.AppLogo
 import com.triapp.presentation.feature.login.AppTextField
 import com.triapp.presentation.feature.login.OtpInputField
 import com.triapp.presentation.feature.login.PhoneNumberVisualTransformation
-import io.github.vinceglb.filekit.PlatformFile
-import io.github.vinceglb.filekit.dialogs.FileKitMode
-import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
-import io.github.vinceglb.filekit.name
+import io.github.vinceglb.filekit.compose.rememberFilePickerLauncher
+import io.github.vinceglb.filekit.core.PlatformFile
 import kotlinx.coroutines.delay
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -284,18 +282,14 @@ fun StepDocuments(
     var uploadStatusFirst by remember { mutableStateOf("") }
     var uploadStatusSecond by remember { mutableStateOf("") }
 
-    val pickerLauncherFirst = rememberFilePickerLauncher(
-        mode = FileKitMode.Single
-    ) { file ->
+    val pickerLauncherFirst = rememberFilePickerLauncher { file ->
         selectedFileProfileFirst = file
         selectedFileProfileFirst?.let { onUploadProfile(it.name) }
         uploadStatusFirst =
             if (selectedFileProfileFirst != null) "Arquivo selecionado: ${selectedFileProfileFirst?.name}" else "Nenhum arquivo selecionado"
     }
 
-    val pickerLauncherSecond = rememberFilePickerLauncher(
-        mode = FileKitMode.Single
-    ) { file ->
+    val pickerLauncherSecond = rememberFilePickerLauncher { file ->
         selectedFileIdSecond = file
         selectedFileIdSecond?.let { onUploadId(it.name) }
         uploadStatusSecond =
@@ -313,7 +307,11 @@ fun StepDocuments(
         Spacer(modifier = Modifier.height(32.dp))
 
         Text("Profile photo", color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
-        Text("A clear photo of your face", color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
+        Text(
+            "A clear photo of your face",
+            color = MaterialTheme.colorScheme.secondary,
+            fontSize = 12.sp
+        )
         Spacer(modifier = Modifier.height(8.dp))
 
         DocumentUploadCard(title = "Drop your file here or browse") {
@@ -329,7 +327,11 @@ fun StepDocuments(
         Spacer(modifier = Modifier.height(24.dp))
 
         Text("ID Document", color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
-        Text("Government-issued ID or passport", color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
+        Text(
+            "Government-issued ID or passport",
+            color = MaterialTheme.colorScheme.secondary,
+            fontSize = 12.sp
+        )
         Spacer(modifier = Modifier.height(8.dp))
 
         DocumentUploadCard(title = "Drop your file here or browse") {
@@ -413,7 +415,11 @@ fun SmsVerificationScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                Text(text = "Não recebeu o código?", color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
+                Text(
+                    text = "Não recebeu o código?",
+                    color = MaterialTheme.colorScheme.secondary,
+                    fontSize = 14.sp
+                )
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Row(
