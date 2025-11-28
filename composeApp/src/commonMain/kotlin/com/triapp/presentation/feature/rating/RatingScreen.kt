@@ -61,23 +61,6 @@ fun TripRatingFlowScreen(
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                IconButton(
-                    onClick = { },
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
-                        .size(40.dp)
-                ) {
-                    Icon(Icons.Outlined.WbSunny, null, tint = MaterialTheme.colorScheme.secondary)
-                }
-            }
-        }
     ) { padding ->
 
         Column(

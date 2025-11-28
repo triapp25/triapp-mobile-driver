@@ -16,7 +16,7 @@ object TriColors {
     val Divider = Color(0xFF2C2C2E)
     val Red = Color(0xFFFF453A)
 
-
+    val AccentGreen = Color(0xFF34C759)
     val ButtonGray = Color(0xFF3A3A3C)
     val DarkText = Color(0xFF48484A)
 }

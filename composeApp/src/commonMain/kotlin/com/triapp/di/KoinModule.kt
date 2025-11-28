@@ -8,6 +8,8 @@ import com.triapp.data.ApiService
 import com.triapp.data.NetworkProvider
 import com.triapp.data.repository.DataRepository
 import com.triapp.data.repository.DataRepositoryImpl
+import com.triapp.data.repository.MapboxSearchRepository
+import com.triapp.data.repository.MapboxSearchRepositoryImpl
 import com.triapp.data.repository.RideRepository
 import com.triapp.data.repository.RideRepositoryImpl
 import com.triapp.domain.usecase.CardOptionsUseCase
@@ -29,6 +31,7 @@ import com.triapp.presentation.feature.rating.RatingViewModel
 import com.triapp.presentation.feature.signup.SignupViewModel
 import com.triapp.utils.FirebaseAuthManager
 import com.triapp.utils.FirebaseServiceImpl
+import com.triapp.utils.LocationProvider
 import com.triapp.utils.LocationRepository
 import de.jensklingenberg.ktorfit.Ktorfit
 import dev.gitlive.firebase.Firebase
@@ -102,9 +105,10 @@ val repositoryModule = module {
     single<DataRepository> { DataRepositoryImpl(get()) }
     single { LocationRepository(get()) }
     single<RideRepository> { RideRepositoryImpl(get()) }
+    single<MapboxSearchRepository> { MapboxSearchRepositoryImpl() }
 
     //single<MapController> { DefaultMapController() }
-    //single<LocationProvider> { LocationProvider() }
+    single<LocationProvider> { LocationProvider() }
 
 }
 
@@ -122,7 +126,7 @@ val domainModule = module {
 val presentationModule = module {
     viewModel { SignupViewModel(get()) }
     viewModel { LoginViewModel(get()) }
-    viewModel { HomeViewModel(get()) }
+    viewModel { HomeViewModel(get(), get(), get()) }
     viewModel { ProfileViewModel(get(), get(), get()) }
     viewModel { RatingViewModel(get()) }
 }

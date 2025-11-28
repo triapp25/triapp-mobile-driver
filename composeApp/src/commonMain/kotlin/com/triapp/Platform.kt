@@ -1,5 +1,7 @@
 package com.triapp
 
+import androidx.compose.runtime.Composable
+
 interface Platform {
     val name: String
 }
@@ -7,3 +9,6 @@ interface Platform {
 expect fun getPlatform(): Platform
 
 expect class PlatformContext
+
+@Composable
+expect fun BackHandler(enabled: Boolean = true, onBack: () -> Unit)

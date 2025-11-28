@@ -31,8 +31,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.triapp.BackHandler
 import com.triapp.domain.model.RideHistoryDomainModel
 import com.triapp.domain.model.WalletDomainModel
+import com.triapp.presentation.feature.home.HomeStep
 import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalAnimationApi::class, ExperimentalMaterial3Api::class)
@@ -49,6 +51,14 @@ fun ProfileFlowScreen(
     var showAddCardSheet by remember { mutableStateOf(false) }
     var cardToDelete by remember { mutableStateOf<WalletDomainModel?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    BackHandler {
+        when(uiState.currentStep) {
+            ProfileStep.Main -> onBack()
+            ProfileStep.Wallet -> onAction(ProfileIntent.Back)
+            ProfileStep.History -> onAction(ProfileIntent.Back)
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->

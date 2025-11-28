@@ -7,7 +7,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navDeepLink
-import com.triapp.presentation.feature.home.HomeScreenTwo
+import com.triapp.presentation.feature.home.HomeScreen
 import com.triapp.presentation.feature.login.LoginScreen
 import com.triapp.presentation.feature.profile.ProfileFlowScreen
 import com.triapp.presentation.feature.rating.TripRatingFlowScreen
@@ -29,7 +29,7 @@ fun AppNavGraph(
 
     NavHost(
         navController = navController,
-        startDestination = NavRoutes.HOME,
+        startDestination = NavRoutes.LOGIN  ,
         modifier = modifier
     ) {
         composable(
@@ -57,7 +57,7 @@ fun AppNavGraph(
             route = NavRoutes.HOME,
             deepLinks = listOf(navDeepLink { uriPattern = "triapp://home" })
         ) {
-            HomeScreenTwo() {
+            HomeScreen {
                 navigator.toRating()
             }
         }

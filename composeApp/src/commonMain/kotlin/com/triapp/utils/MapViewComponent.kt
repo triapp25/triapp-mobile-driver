@@ -7,5 +7,6 @@ import com.triapp.domain.model.Coordinate
 @Composable
 expect fun MapViewComponent(
     modifier: Modifier = Modifier,
-    coordinate: Coordinate
+    coordinate: Coordinate,
+    driverCoordinate: Coordinate? = null
 )

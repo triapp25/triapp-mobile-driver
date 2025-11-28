@@ -1,10 +1,15 @@
 package com.triapp.presentation.feature.home
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.FlashOn
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewModelScope
-import com.triapp.domain.model.DriverInfo
-import com.triapp.domain.model.HomeDomainModel
-import com.triapp.domain.model.LatLng
-import com.triapp.domain.model.RideInfo
+import com.triapp.data.repository.MapboxSearchRepository
+import com.triapp.domain.model.*
+import com.triapp.local.AppPreferences
 import com.triapp.presentation.BaseViewModel
 import com.triapp.utils.LocationRepository
 import kotlinx.coroutines.Job
@@ -13,107 +18,191 @@ import kotlinx.coroutines.launch
 
 class HomeViewModel(
     private val locationRepository: LocationRepository,
+    private val mapboxRepository: MapboxSearchRepository,
+    private val appPreferences: AppPreferences,
     initialState: HomeDomainModel = HomeDomainModel()
 ) : BaseViewModel<HomeDomainModel, HomeIntent, HomeEffect>(initialState) {
 
     private var simulationJob: Job? = null
 
     init {
-        fetchUserLocation()
+        loadInitialData()
+        restoreSession() // Tenta recuperar corrida ativa
     }
 
-    fun fetchUserLocation() {
+    private fun loadInitialData() {
         viewModelScope.launch {
-            // PASSO 1: Solicitar/Verificar Permissão
-            val permissionGranted = locationRepository.requestLocationPermission()
+            // 1. Carregar Cartão Padrão (Simulado)
+            val defaultCard = WalletDomainModel(
+                icon = Icons.Default.CreditCard,
+                color = Color.Black,
+                title = "Visa",
+                subtitle = "**** 4242",
+                extraInfo = "Expira 12/28",
+                isDefault = true
+            )
 
-            if (permissionGranted) {
-                // PASSO 2: Buscar Localização
-                val location = locationRepository.getCurrentLocation()
+            // 2. Buscar Localização Real
+            val permission = locationRepository.requestLocationPermission()
 
-                if (location != null) {
-                    println("Latitude: ${location.first}, Longitude: ${location.second}")
-                    updateState { it.copy(pickup = "LatLng(location.first, location.second)") }
-                } else {
-                    updateState { it.copy(error = "Não foi possível obter localização") }
+            // Endereço padrão caso não ache
+            var currentAddr = "Av. Paulista, 1578"
+            var currentLatLng: LatLng? = null
+
+            if (permission) {
+                val loc = locationRepository.getCurrentLocation()
+                if (loc != null) {
+                    // SIMULAÇÃO DE REVERSE GEOCODING (API)
+                    // Na prática, você enviaria loc.first/loc.second para a API do Mapbox
+                    // e ela retornaria "Rua Haddock Lobo, 595".
+                    // Por enquanto, vamos simular que o GPS retornou este endereço:
+                    currentAddr = "Rua Haddock Lobo, 595"
+                    currentLatLng = LatLng(loc.first, loc.second)
                 }
-            } else {
-                // Usuário negou a permissão
-                updateState { it.copy(error = "Permissão de localização negada. Por favor, conceda nas configurações do aplicativo.") }
+            }
+
+            updateState {
+                it.copy(
+                    defaultWallet = defaultCard,
+                    pickup = currentAddr, // Agora mostra o endereço, não "Minha loc"
+                    pickupAddress = currentLatLng?.let { latLng ->
+                        SearchResult("0", currentAddr, "São Paulo, SP", latLng.lat, latLng.lng)
+                    }
+                )
+            }
+        }
+    }
+
+    // --- PERSISTÊNCIA DE ESTADO ---
+    private fun restoreSession() {
+        viewModelScope.launch {
+            // Verifica se existe flag de corrida ativa no disco
+            val hasActiveRide = appPreferences.observeSignUpDraft().toString().contains("ACTIVE_RIDE") // Simplificação
+
+            if (hasActiveRide) {
+                // Recupera dados do disco/API
+                val driver = DriverInfo("d1", "Carlos Silva", "Toyota Corolla", "ABC-1234", "4.9")
+                val route = mockRoute()
+
+                updateState {
+                    it.copy(
+                        step = HomeStep.InProgress,
+                        driver = driver,
+                        ride = RideInfo(driver, 12, 5.0),
+                        driverPosition = route.first(),
+                        routePolyline = route,
+                        tripStatusMessage = "Viagem em andamento"
+                    )
+                }
+                startSimulation()
             }
         }
     }
 
     override fun processIntent(intent: HomeIntent) {
         when (intent) {
-            is HomeIntent.EnterDestination -> updateState { it.copy(step = HomeStep.SelectingDestination) }
-            is HomeIntent.UpdatePickup -> updateState { it.copy(pickup = intent.pickup) }
-            is HomeIntent.UpdateDropoff -> updateState { it.copy(dropoff = intent.dropoff) }
-            is HomeIntent.SelectOption -> updateState {
-                it.copy(
-                    selectedOption = intent.option,
-                    step = HomeStep.ChoosingRide
-                )
-            }
+            // Navegação Básica
+            is HomeIntent.EnterOrigin -> updateState { it.copy(step = HomeStep.DestinationSearch) }
+            is HomeIntent.EnterDestination -> updateState { it.copy(step = HomeStep.DestinationSearch) }
 
+            // Edição de Endereços (Volta para busca)
+            is HomeIntent.EditPickup -> updateState { it.copy(step = HomeStep.DestinationSearch) } // Poderia adicionar flag isEditingPickup
+            is HomeIntent.EditDropoff -> updateState { it.copy(step = HomeStep.DestinationSearch) }
+
+            // Carteira
+            is HomeIntent.OpenWallet -> updateState { it.copy(step = HomeStep.PaymentSelection) }
+            is HomeIntent.CloseWallet -> updateState { it.copy(step = HomeStep.RideSelection) }
+
+            // Busca e Seleção
+            is HomeIntent.SearchAddress -> searchAddress(intent.query)
+            is HomeIntent.SelectAddress -> selectAddress(intent.result, intent.isDestination)
+            is HomeIntent.SelectOption -> updateState { it.copy(selectedOption = intent.option) }
+
+            // Fluxo da Corrida
             HomeIntent.ConfirmRequest -> requestRide()
             HomeIntent.CancelRide -> cancelRide()
-            HomeIntent.SimulateArrival -> simulateArrival()
+
+            // Simulação Interna
             HomeIntent.StartSimulation -> startSimulation()
-            HomeIntent.StopSimulation -> stopSimulation()
+            HomeIntent.SimulateArrival -> simulateArrival()
+            else -> {}
         }
     }
 
-
-    private fun requestRide() {
+    private fun searchAddress(query: String) {
         viewModelScope.launch {
-            updateState { it.copy(isLoading = true, error = null) }
-            delay(800)
+            updateState { it.copy(isSearchingLocation = true) }
+            val results = mapboxRepository.searchPlaces(query)
+            updateState { it.copy(searchResults = results, isSearchingLocation = false) }
+        }
+    }
 
-            val driver = DriverInfo("d1", "Carlos Silva", "Toyota Corolla", "ABC-1234", 4.9)
-            val route = mockRoute()
+    private fun selectAddress(result: SearchResult, isDestination: Boolean) {
+        if (isDestination) {
+            updateState { it.copy(dropoff = result.name, dropoffAddress = result) }
+        } else {
+            updateState { it.copy(pickup = result.name, pickupAddress = result) }
+        }
 
+        // Se selecionou o destino, vai para seleção de carro
+        // (Assumindo que origem já foi pega pelo GPS ou selecionada antes)
+        if (isDestination) {
+            fetchRideOptions()
+        }
+    }
+
+    private fun fetchRideOptions() {
+        viewModelScope.launch {
+            updateState { it.copy(step = HomeStep.RideSelection, isLoadingRide = true) }
+            delay(1500) // Simula API de cálculo de rota
+
+            val options = listOf(
+                RideOption("1", "Economy", "4 min", "R$ 15.90", Icons.Default.FlashOn),
+                RideOption("2", "Comfort", "3 min", "R$ 22.50", Icons.Default.Star),
+                RideOption("3", "Black", "5 min", "R$ 35.00", Icons.Default.DirectionsCar)
+            )
 
             updateState {
                 it.copy(
-                    isLoading = false,
-                    step = HomeStep.InProgress,
-                    ride = RideInfo(driver, etaMinutes = 8, remainingKm = 3.6),
-                    driverPosition = route.firstOrNull(),
-                    routePolyline = route
+                    availableOptions = options,
+                    selectedOption = options.first(), // Seleciona o primeiro
+                    isLoadingRide = false
                 )
             }
+        }
+    }
 
+    private fun requestRide() {
+        viewModelScope.launch {
+            // 1. Procurando
+            updateState { it.copy(step = HomeStep.Searching) }
+
+            // Salvar persistência (Simulado)
+            // appPreferences.putString("ride_status", "ACTIVE_RIDE")
+
+            delay(3000) // Simula WebSocket encontrando motorista
+
+            // 2. Motorista Encontrado
+            val driver = DriverInfo("d1", "Carlos Silva", "Honda Civic", "ABC-1234", "4.9")
+            updateState {
+                it.copy(step = HomeStep.DriverFound, driver = driver, etaMessage = "3 min")
+            }
+            delay(3000)
+
+            // 3. Viagem Iniciada
+            val route = mockRoute()
+            updateState {
+                it.copy(
+                    step = HomeStep.InProgress,
+                    ride = RideInfo(driver, 15, 5.2),
+                    driverPosition = route.first(),
+                    routePolyline = route,
+                    tripStatusMessage = "A caminho do destino"
+                )
+            }
             processIntent(HomeIntent.StartSimulation)
         }
     }
-
-    private fun cancelRide() {
-        stopSimulation()
-        updateState {
-            it.copy(
-                step = HomeStep.Idle,
-                ride = null,
-                driverPosition = null,
-                routePolyline = emptyList()
-            )
-        }
-    }
-
-
-    private fun simulateArrival() {
-        stopSimulation()
-        updateState {
-            it.copy(
-                step = HomeStep.Idle,
-                ride = null,
-                driverPosition = null,
-                routePolyline = emptyList()
-            )
-        }
-        sendEffect(HomeEffect.NavigateToConfirmation)
-    }
-
 
     private fun startSimulation() {
         if (simulationJob != null) return
@@ -121,43 +210,54 @@ class HomeViewModel(
             val poly = state.value.routePolyline
             if (poly.isEmpty()) return@launch
 
-
             var idx = 0
-            while (idx < poly.size) {
+            while (idx < poly.size && state.value.step == HomeStep.InProgress) {
+                val progress = idx.toFloat() / poly.size.toFloat()
                 updateState { s ->
+                    val remaining = poly.size - idx
                     s.copy(
                         driverPosition = poly[idx],
-                        ride = s.ride?.copy(
-                            etaMinutes = computeEta(poly.size - idx),
-                            remainingKm = computeRemainingKm(poly.size - idx)
-                        )
+                        routeProgress = progress,
+                        etaMessage = "${(remaining * 0.5).toInt().coerceAtLeast(1)} min"
                     )
                 }
                 idx++
-                delay(1500)
+                delay(1000)
             }
             processIntent(HomeIntent.SimulateArrival)
         }
     }
 
+    private fun simulateArrival() {
+        stopSimulation()
+        // appPreferences.remove("ride_status") // Limpa persistência
+        sendEffect(HomeEffect.NavigateToConfirmation)
+    }
+
+    private fun cancelRide() {
+        stopSimulation()
+        updateState {
+            it.copy(
+                step = HomeStep.Initial,
+                ride = null,
+                driverPosition = null,
+                routePolyline = emptyList(),
+                dropoff = "",
+                dropoffAddress = null
+            )
+        }
+    }
 
     private fun stopSimulation() {
         simulationJob?.cancel()
         simulationJob = null
     }
 
-
-    private fun computeEta(pointsRemaining: Int): Int = (pointsRemaining * 1) // simplified
-    private fun computeRemainingKm(pointsRemaining: Int): Double = pointsRemaining * 0.5
-
-
     private fun mockRoute(): List<LatLng> {
         return listOf(
-            LatLng(-23.561414, -46.655881),
-            LatLng(-23.562200, -46.656500),
-            LatLng(-23.563000, -46.657100),
-            LatLng(-23.564000, -46.658000),
-            LatLng(-23.565000, -46.659000)
+            LatLng(-23.561, -46.655), LatLng(-23.562, -46.656),
+            LatLng(-23.563, -46.657), LatLng(-23.564, -46.658),
+            LatLng(-23.565, -46.659), LatLng(-23.566, -46.660)
         )
     }
 }
