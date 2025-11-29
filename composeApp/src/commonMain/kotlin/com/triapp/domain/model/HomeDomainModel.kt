@@ -1,7 +1,6 @@
 package com.triapp.domain.model
 
 import androidx.compose.runtime.Immutable
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.triapp.presentation.ViewState
 import com.triapp.presentation.feature.home.HomeStep
@@ -11,6 +10,7 @@ import kotlinx.serialization.Serializable
 data class HomeDomainModel(
     // Controle de Navegação
     val step: HomeStep = HomeStep.Initial,
+    val pendingRating: RatingDomainModel? = null,
 
     // --- CAMPOS DE TEXTO (Faltavam estes) ---
     val pickup: String = "",  // Texto do campo de origem

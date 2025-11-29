@@ -9,6 +9,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewModelScope
 import com.triapp.data.repository.MapboxSearchRepository
 import com.triapp.domain.model.*
+import com.triapp.domain.usecase.GetRatingLastUseCase
 import com.triapp.local.AppPreferences
 import com.triapp.presentation.BaseViewModel
 import com.triapp.utils.LocationRepository
@@ -17,6 +18,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class HomeViewModel(
+    private val getRatingUseCase: GetRatingLastUseCase,
     private val locationRepository: LocationRepository,
     private val mapboxRepository: MapboxSearchRepository,
     private val appPreferences: AppPreferences,
@@ -27,7 +29,8 @@ class HomeViewModel(
 
     init {
         loadInitialData()
-        restoreSession() // Tenta recuperar corrida ativa
+        restoreSession()
+        if (state.value.step == HomeStep.Initial) checkPendingRatings()
     }
 
     private fun loadInitialData() {
@@ -77,7 +80,8 @@ class HomeViewModel(
     private fun restoreSession() {
         viewModelScope.launch {
             // Verifica se existe flag de corrida ativa no disco
-            val hasActiveRide = appPreferences.observeSignUpDraft().toString().contains("ACTIVE_RIDE") // Simplificação
+            val hasActiveRide = appPreferences.observeSignUpDraft().toString()
+                .contains("ACTIVE_RIDE") // Simplificação
 
             if (hasActiveRide) {
                 // Recupera dados do disco/API
@@ -228,9 +232,20 @@ class HomeViewModel(
         }
     }
 
+    fun checkPendingRatings() {
+        viewModelScope.launch {
+            getRatingUseCase.invoke().onSuccess { lastRating ->
+                if (lastRating != null && !lastRating.isRated) {
+                    updateState {
+                        it.copy(pendingRating = lastRating)
+                    }
+                }
+            }
+        }
+    }
+
     private fun simulateArrival() {
         stopSimulation()
-        // appPreferences.remove("ride_status") // Limpa persistência
         sendEffect(HomeEffect.NavigateToConfirmation)
     }
 

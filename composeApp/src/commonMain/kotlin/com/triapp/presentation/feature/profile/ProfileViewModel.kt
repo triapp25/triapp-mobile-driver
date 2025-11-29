@@ -7,12 +7,14 @@ import com.triapp.domain.usecase.CardOptionsUseCase
 import com.triapp.domain.usecase.GetRideHistoryUseCase
 import com.triapp.domain.usecase.GetSignUpDraftUseCase
 import com.triapp.presentation.BaseViewModel
+import com.triapp.utils.FirebaseAuthManager
 import kotlinx.coroutines.launch
 
 class ProfileViewModel(
-    val cardUseCase: CardOptionsUseCase,
-    val rideUseCase: GetRideHistoryUseCase,
-    val userUseCase: GetSignUpDraftUseCase
+    private val cardUseCase: CardOptionsUseCase,
+    private val rideUseCase: GetRideHistoryUseCase,
+    private val userUseCase: GetSignUpDraftUseCase,
+    private val firebaseManager: FirebaseAuthManager
 ) :
     BaseViewModel<ProfileDomainModel, ProfileIntent, ProfileEffect>(
         initialState = ProfileDomainModel()
@@ -29,7 +31,10 @@ class ProfileViewModel(
             }
 
             ProfileIntent.Logout -> {
-                sendEffect(ProfileEffect.LoggedOut)
+                viewModelScope.launch {
+                    firebaseManager.signOut()
+                    sendEffect(ProfileEffect.LoggedOut)
+                }
             }
 
             is ProfileIntent.CreateCard -> {

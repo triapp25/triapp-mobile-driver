@@ -46,7 +46,8 @@ import org.koin.compose.viewmodel.koinViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    onNavigateToRate: () -> Unit
+    onNavigateToRate: () -> Unit,
+    onLogout: () -> Unit
 ) {
     val viewModel = koinViewModel<HomeViewModel>()
     val uiState by viewModel.state.collectAsState()
@@ -106,7 +107,7 @@ fun HomeScreen(
         drawerContent = {
             ProfileFlowScreen(
                 onBack = { scope.launch { drawerState.close() } },
-                onLogout = {}
+                onLogout = onLogout
             )
         }
     ) {

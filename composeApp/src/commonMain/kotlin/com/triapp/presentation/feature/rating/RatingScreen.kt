@@ -33,14 +33,22 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.triapp.TriAppTheme
 import com.triapp.TriColors
+import com.triapp.domain.model.RatingArgs
+import io.ktor.http.parametersOf
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
 
 @Composable
 fun TripRatingFlowScreen(
+    args: RatingArgs,
     onFinished: () -> Unit
 ) {
-    val viewModel = koinViewModel<RatingViewModel>()
+    // Passando os argumentos para a ViewModel via Koin
+    val viewModel = koinViewModel<RatingViewModel>(
+        parameters = { parametersOf(args) }
+    )
+
     val uiState by viewModel.state.collectAsState()
     val onAction: (RatingIntent) -> Unit = viewModel::processIntent
 
@@ -48,7 +56,8 @@ fun TripRatingFlowScreen(
         viewModel.effect.collect { effect ->
             when (effect) {
                 RatingEffect.Finished -> onFinished()
-                is RatingEffect.ShowToast -> { /* toast */ }
+                is RatingEffect.ShowToast -> { /* toast */
+                }
             }
         }
     }
@@ -83,9 +92,18 @@ fun TripRatingFlowScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            Text("Trip completed!", color = MaterialTheme.colorScheme.primary, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Text(
+                "Trip completed!",
+                color = MaterialTheme.colorScheme.primary,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold
+            )
             Spacer(modifier = Modifier.height(8.dp))
-            Text("How was your experience?", color = MaterialTheme.colorScheme.secondary, fontSize = 16.sp)
+            Text(
+                "How was your experience?",
+                color = MaterialTheme.colorScheme.secondary,
+                fontSize = 16.sp
+            )
 
             Spacer(modifier = Modifier.height(32.dp))
 
@@ -101,11 +119,20 @@ fun TripRatingFlowScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
 
-                    DriverInfoRow()
+                    DriverInfoRow(
+                        name = uiState.driverName,
+                        car = uiState.driverCar,
+                        price = uiState.tripPrice,
+                        time = uiState.tripTime
+                    )
 
                     Spacer(modifier = Modifier.height(32.dp))
 
-                    Text("Rate the driver", color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
+                    Text(
+                        "Rate the driver",
+                        color = MaterialTheme.colorScheme.secondary,
+                        fontSize = 14.sp
+                    )
                     Spacer(modifier = Modifier.height(16.dp))
 
                     StarRatingBar(
@@ -122,7 +149,11 @@ fun TripRatingFlowScreen(
 
                             Spacer(modifier = Modifier.height(32.dp))
 
-                            Text("What did you like most?", color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
+                            Text(
+                                "What did you like most?",
+                                color = MaterialTheme.colorScheme.secondary,
+                                fontSize = 14.sp
+                            )
                             Spacer(modifier = Modifier.height(12.dp))
 
                             FlowLayoutLikeRow(
@@ -134,14 +165,21 @@ fun TripRatingFlowScreen(
 
                             Spacer(modifier = Modifier.height(24.dp))
 
-                            Text("Leave a comment (optional)", color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
+                            Text(
+                                "Leave a comment (optional)",
+                                color = MaterialTheme.colorScheme.secondary,
+                                fontSize = 14.sp
+                            )
                             Spacer(modifier = Modifier.height(12.dp))
 
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(100.dp)
-                                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
+                                    .background(
+                                        MaterialTheme.colorScheme.surfaceVariant,
+                                        RoundedCornerShape(12.dp)
+                                    )
                                     .padding(16.dp)
                             ) {
                                 if (uiState.comment.isEmpty()) {
@@ -155,7 +193,10 @@ fun TripRatingFlowScreen(
                                     onValueChange = {
                                         onAction(RatingIntent.UpdateComment(it))
                                     },
-                                    textStyle = TextStyle(color = MaterialTheme.colorScheme.primary, fontSize = 14.sp),
+                                    textStyle = TextStyle(
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontSize = 14.sp
+                                    ),
                                     modifier = Modifier.fillMaxSize()
                                 )
                             }
@@ -165,7 +206,10 @@ fun TripRatingFlowScreen(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(16.dp))
+                                    .background(
+                                        MaterialTheme.colorScheme.surfaceVariant,
+                                        RoundedCornerShape(16.dp)
+                                    )
                                     .padding(16.dp)
                             ) {
                                 Column {
@@ -173,8 +217,17 @@ fun TripRatingFlowScreen(
                                         Text("💝", fontSize = 16.sp)
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Column {
-                                            Text("Add a tip", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                            Text("Reward good service", color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
+                                            Text(
+                                                "Add a tip",
+                                                color = MaterialTheme.colorScheme.primary,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp
+                                            )
+                                            Text(
+                                                "Reward good service",
+                                                color = MaterialTheme.colorScheme.secondary,
+                                                fontSize = 12.sp
+                                            )
                                         }
                                     }
 
@@ -184,16 +237,32 @@ fun TripRatingFlowScreen(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-                                        TipButton("R$ 2", uiState.selectedTip == "2", Modifier.weight(1f)) {
+                                        TipButton(
+                                            "R$ 2",
+                                            uiState.selectedTip == "2",
+                                            Modifier.weight(1f)
+                                        ) {
                                             onAction(RatingIntent.SelectTip("2"))
                                         }
-                                        TipButton("R$ 5", uiState.selectedTip == "5", Modifier.weight(1f)) {
+                                        TipButton(
+                                            "R$ 5",
+                                            uiState.selectedTip == "5",
+                                            Modifier.weight(1f)
+                                        ) {
                                             onAction(RatingIntent.SelectTip("5"))
                                         }
-                                        TipButton("R$ 10", uiState.selectedTip == "10", Modifier.weight(1f)) {
+                                        TipButton(
+                                            "R$ 10",
+                                            uiState.selectedTip == "10",
+                                            Modifier.weight(1f)
+                                        ) {
                                             onAction(RatingIntent.SelectTip("10"))
                                         }
-                                        TipButton("Other", uiState.selectedTip == "Other", Modifier.weight(1f)) {
+                                        TipButton(
+                                            "Other",
+                                            uiState.selectedTip == "Other",
+                                            Modifier.weight(1f)
+                                        ) {
                                             onAction(RatingIntent.SelectTip("Other"))
                                         }
                                     }
@@ -242,35 +311,6 @@ fun TripRatingFlowScreen(
 // ================== Componentes Auxiliares ==================
 
 @Composable
-fun DriverInfoRow() {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        // Avatar
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text("👨‍✈️", fontSize = 24.sp)
-        }
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        // Info
-        Column(modifier = Modifier.weight(1f)) {
-            Text("Carlos Silva", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            Text("Toyota Corolla • ABC-1234", color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
-        }
-
-        // Preço
-        Column(horizontalAlignment = Alignment.End) {
-            Text("R$ 15.90", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            Text("8 min", color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
-        }
-    }
-}
-
-@Composable
 fun StarRatingBar(rating: Int, onRatingChanged: (Int) -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -301,7 +341,9 @@ fun TipButton(
         modifier = modifier
             .height(36.dp)
             .background(
-                if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(
+                    alpha = 0.5f
+                ),
                 RoundedCornerShape(8.dp)
             )
             .clickable { onClick() },
@@ -341,6 +383,51 @@ fun FlowLayoutLikeRow(tags: List<String>, selectedTags: List<String>, onClick: (
 }
 
 @Composable
+fun DriverInfoRow(
+    name: String,
+    car: String,
+    price: String,
+    time: String
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("👨‍✈️", fontSize = 24.sp)
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                name.ifEmpty { "Motorista" },
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp
+            )
+            Text(
+                car.ifEmpty { "Carro desconhecido" },
+                color = MaterialTheme.colorScheme.secondary,
+                fontSize = 12.sp
+            )
+        }
+
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                price,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp
+            )
+            Text(time, color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
+        }
+    }
+}
+
+@Composable
 fun TagChip(text: String, isSelected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Box(
         modifier = modifier
@@ -351,7 +438,7 @@ fun TagChip(text: String, isSelected: Boolean, modifier: Modifier = Modifier, on
             )
             .border(
                 width = 1.dp,
-                color = if(isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant, // Borda acende se selecionado
+                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant, // Borda acende se selecionado
                 shape = RoundedCornerShape(8.dp)
             )
             .clickable { onClick() }
@@ -371,5 +458,5 @@ fun TagChip(text: String, isSelected: Boolean, modifier: Modifier = Modifier, on
 @Preview
 @Composable
 fun RatingPreview() {
-    TripRatingFlowScreen {}
+    TripRatingFlowScreen(RatingArgs("", "", "", "", "", "")) {}
 }

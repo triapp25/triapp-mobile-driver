@@ -10,10 +10,15 @@ import com.triapp.data.repository.DataRepository
 import com.triapp.data.repository.DataRepositoryImpl
 import com.triapp.data.repository.MapboxSearchRepository
 import com.triapp.data.repository.MapboxSearchRepositoryImpl
+import com.triapp.data.repository.RatingRepository
+import com.triapp.data.repository.RatingRepositoryImpl
 import com.triapp.data.repository.RideRepository
 import com.triapp.data.repository.RideRepositoryImpl
+import com.triapp.domain.model.RatingArgs
 import com.triapp.domain.usecase.CardOptionsUseCase
+import com.triapp.domain.usecase.CreateLocalRatingUseCase
 import com.triapp.domain.usecase.GetDataUseCase
+import com.triapp.domain.usecase.GetRatingLastUseCase
 import com.triapp.domain.usecase.GetRideHistoryUseCase
 import com.triapp.domain.usecase.GetSignUpDraftUseCase
 import com.triapp.domain.usecase.SaveRideUseCase
@@ -105,6 +110,7 @@ val repositoryModule = module {
     single<DataRepository> { DataRepositoryImpl(get()) }
     single { LocationRepository(get()) }
     single<RideRepository> { RideRepositoryImpl(get()) }
+    single<RatingRepository> { RatingRepositoryImpl(get(), get()) }
     single<MapboxSearchRepository> { MapboxSearchRepositoryImpl() }
 
     //single<MapController> { DefaultMapController() }
@@ -121,14 +127,22 @@ val domainModule = module {
     single { CardOptionsUseCase(get()) }
     single { GetRideHistoryUseCase(get()) }
     single { SaveRideUseCase(get()) }
+    single { GetRatingLastUseCase(get()) }
+    single { CreateLocalRatingUseCase(get()) }
 }
 
 val presentationModule = module {
     viewModel { SignupViewModel(get()) }
     viewModel { LoginViewModel(get()) }
-    viewModel { HomeViewModel(get(), get(), get()) }
-    viewModel { ProfileViewModel(get(), get(), get()) }
-    viewModel { RatingViewModel(get()) }
+    viewModel { HomeViewModel(get(), get(), get(), get()) }
+    viewModel { ProfileViewModel(get(), get(), get(), get()) }
+    viewModel { (args: RatingArgs) ->
+        RatingViewModel(
+            sendRatingUseCase = get(),
+            createRatingUseCase = get(),
+            args = args
+        )
+    }
 }
 
 val storageModule = module {
@@ -143,6 +157,7 @@ val storageModule = module {
     // DAOs
     single { get<AppDatabase>().notificationDao() }
     single { get<AppDatabase>().rideDao() }
+    single { get<AppDatabase>().ratingDao() }
 }
 
 val appModule =

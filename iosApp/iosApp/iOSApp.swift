@@ -1,4 +1,5 @@
 import SwiftUI
+import ComposeApp
 
 @main
 struct iOSApp: App {
@@ -7,6 +8,10 @@ struct iOSApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .onOpenURL { url in
+                    let urlString = url.absoluteString
+                    DeepLinkManager.shared.handleDeepLink(url: urlString)
+                }
         }
     }
 }

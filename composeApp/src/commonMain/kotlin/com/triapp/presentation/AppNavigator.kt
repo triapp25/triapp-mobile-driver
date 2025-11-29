@@ -1,7 +1,10 @@
 package com.triapp.presentation
 
-
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import androidx.navigation.NavHostController
+import com.triapp.domain.model.RatingArgs
+import com.triapp.utils.UrlEncoder
 
 class AppNavigator(
     private val navController: NavHostController
@@ -13,6 +16,17 @@ class AppNavigator(
             popUpTo(0)
             launchSingleTop = true
         }
+    }
+
+    fun toRating(args: RatingArgs) {
+        // 1. Converte Objeto -> JSON String
+        val json = Json.encodeToString(args)
+
+        // 2. Codifica para URL (segurança contra caracteres especiais)
+        val encodedJson = UrlEncoder.encode(json)
+
+        // 3. Navega para "rating/O_JSON_ENCODED"
+        navigateAndClearStack("${NavRoutes.RATING_BASE}/$encodedJson")
     }
 
     fun back() = navController.popBackStack()
@@ -31,7 +45,8 @@ object NavRoutes {
     const val SIGNUP = "signup"
     const val HOME = "home"
     const val PROFILE = "profile"
-    const val RATING = "rating"
+    const val RATING_BASE = "rating"
+    const val RATING = "$RATING_BASE/{args}"
     const val RESET_CODE = "reset_code"
 }
 

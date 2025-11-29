@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "469368ca6cd8736f8ff567f881f0bb47",
+    "identityHash": "e430f37aca58ad43a8a4b7776ae7f356",
     "entities": [
       {
         "tableName": "notifications",
@@ -110,11 +110,88 @@
             "rideId"
           ]
         }
+      },
+      {
+        "tableName": "trip_ratings",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`tripId` TEXT NOT NULL, `driverName` TEXT NOT NULL, `driverCar` TEXT NOT NULL, `tripPrice` TEXT NOT NULL, `tripTime` TEXT NOT NULL, `userRating` INTEGER NOT NULL, `userComment` TEXT NOT NULL, `userSelectedTags` TEXT NOT NULL, `userSelectedTip` TEXT, `isRated` INTEGER NOT NULL, `timestamp` INTEGER NOT NULL, PRIMARY KEY(`tripId`))",
+        "fields": [
+          {
+            "fieldPath": "tripId",
+            "columnName": "tripId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "driverName",
+            "columnName": "driverName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "driverCar",
+            "columnName": "driverCar",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tripPrice",
+            "columnName": "tripPrice",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tripTime",
+            "columnName": "tripTime",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "userRating",
+            "columnName": "userRating",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "userComment",
+            "columnName": "userComment",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "userSelectedTags",
+            "columnName": "userSelectedTags",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "userSelectedTip",
+            "columnName": "userSelectedTip",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "isRated",
+            "columnName": "isRated",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "tripId"
+          ]
+        }
       }
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '469368ca6cd8736f8ff567f881f0bb47')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e430f37aca58ad43a8a4b7776ae7f356')"
     ]
   }
 }

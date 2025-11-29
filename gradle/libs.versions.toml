@@ -7,6 +7,7 @@ kotlin = "2.0.21"
 
 # KSP (Must strictly match the Kotlin version above)
 # Format is: [KotlinVersion]-[KspRevision]
+kotlinxDatetime = "0.6.2"
 ksp = "2.0.21-1.0.25"
 
 # Compose Multiplatform (1.9.0 is Android Compose version, JB Compose is at 1.7.0)
@@ -67,6 +68,7 @@ android-ndk27 = { module = "com.mapbox.maps:android-ndk27", version.ref = "andro
 androidx-ui-android = { module = "androidx.compose.ui:ui-android" }
 geo-compose = { module = "dev.icerock.moko:geo-compose", version.ref = "geoCompose" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutinesCore" }
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetime" }
 mapbox = { module = "com.mapbox.maps:android", version.ref = "mapbox" }
 androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "coreSplashscreen" }
 compose-multiplatform-file-picker = { module = "com.github.Wavesonics:compose-multiplatform-file-picker", version.ref = "composeMultiplatformFilePicker" }

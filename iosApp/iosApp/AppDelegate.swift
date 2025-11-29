@@ -10,39 +10,32 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
 
         FirebaseApp.configure()
-        KoinInitKt.doInitKoin{ _ in }
 
-        // Inicializa KMP
-        //KMPInitializerKt.onDidFinishLaunchingWithOptions()
-
-        // Permissão de notificações
-        //notificationManager.requestPermission { granted in
-        //    if granted {
-        //                DispatchQueue.main.async {
-        //                    UIApplication.shared.registerForRemoteNotifications()
-        //                }
-        //            }
-        //}
+        // Inicializa o Koin usando a função definida em KoinIOS.kt
+        KoinIOSKt.initKoin()
 
         UNUserNotificationCenter.current().delegate = self
         Messaging.messaging().delegate = self
+
+        // Registro para notificações remotas
+        application.registerForRemoteNotifications()
 
         return true
     }
 
     func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
         print("Firebase registration token: \(fcmToken ?? "")")
-        // envie para o backend se precisar
+        // Aqui você enviaria o token para seu backend para atualizar o usuário
     }
 
+    // Exibe notificação mesmo com app aberto
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 willPresent notification: UNNotification,
                                 withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-        let content = notification.request.content
-        //notificationManager.showNotification(title: content.title, message: content.body)
-        completionHandler([.banner, .sound])
+        completionHandler([.banner, .sound, .badge])
     }
 
+    // Ação ao clicar na notificação
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 didReceive response: UNNotificationResponse,
                                 withCompletionHandler completionHandler: @escaping () -> Void) {

@@ -132,7 +132,7 @@ kotlin {
             implementation(libs.geo)
             implementation(libs.geo.compose)
             implementation(compose.materialIconsExtended)
-
+            implementation(libs.kotlinx.datetime)
             implementation(libs.permissions)
             // implementation(libs.geo) // Removido duplicado
         }

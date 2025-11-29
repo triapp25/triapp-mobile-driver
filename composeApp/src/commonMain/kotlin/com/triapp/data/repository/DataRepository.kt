@@ -2,16 +2,13 @@ package com.triapp.data.repository
 
 import com.triapp.data.ApiService
 import com.triapp.data.dtos.CardBody
-import com.triapp.data.dtos.RatingBody
 import com.triapp.data.dtos.StartTaxiBody
 import com.triapp.domain.model.LatLng
 import com.triapp.domain.model.ProductDomainModel
-import com.triapp.domain.model.RatingDomainModel
 import com.triapp.domain.model.WalletDomainModel
 
 interface DataRepository {
     suspend fun fetchProducts(): List<ProductDomainModel>
-    suspend fun sendRating(model: RatingDomainModel)
     suspend fun startTaxi(): String
     suspend fun cardOptions(model: WalletDomainModel): WalletDomainModel
 }
@@ -31,17 +28,6 @@ class DataRepositoryImpl(
                 imageUrl = productDto.imageUrl ?: ""
             )
         }
-    }
-
-    override suspend fun sendRating(model: RatingDomainModel) {
-        return apiService.sendRating(
-            RatingBody(
-                rating = model.rating,
-                comment = model.comment,
-                selectedTags = model.selectedTags,
-                selectedTip = model.selectedTip
-            )
-        )
     }
 
     override suspend fun startTaxi(): String {

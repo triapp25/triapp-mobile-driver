@@ -29,6 +29,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.triapp.BackHandler
 import com.triapp.TriAppTheme
 import com.triapp.TriColors
 import com.triapp.domain.model.SignUpDomainModel
@@ -37,6 +38,8 @@ import com.triapp.presentation.feature.login.AppLogo
 import com.triapp.presentation.feature.login.AppTextField
 import com.triapp.presentation.feature.login.OtpInputField
 import com.triapp.presentation.feature.login.PhoneNumberVisualTransformation
+import com.triapp.presentation.feature.profile.ProfileIntent
+import com.triapp.presentation.feature.profile.ProfileStep
 import io.github.vinceglb.filekit.compose.rememberFilePickerLauncher
 import io.github.vinceglb.filekit.core.PlatformFile
 import kotlinx.coroutines.delay
@@ -44,10 +47,21 @@ import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
-fun SignupFlowScreen(activity: Any?, onNavigate: () -> Unit) {
+fun SignupFlowScreen(
+    activity: Any?,
+    onBack: () -> Unit,
+    onNavigate: () -> Unit
+) {
     val viewModel = koinViewModel<SignupViewModel>()
     val uiState by viewModel.state.collectAsState()
     val onAction: (SignupIntent) -> Unit = viewModel::processIntent
+
+    BackHandler {
+        when(uiState.currentStep) {
+            SignupStep.PersonalInfo -> onBack()
+            else -> onAction(SignupIntent.PreviousStep)
+        }
+    }
 
     Scaffold(
         modifier = Modifier.imePadding(),
@@ -56,7 +70,10 @@ fun SignupFlowScreen(activity: Any?, onNavigate: () -> Unit) {
             if (uiState.currentStep != SignupStep.Success) {
                 SignupTopBar(
                     step = uiState.currentStep,
-                    onBack = { onAction(SignupIntent.PreviousStep) }
+                    onBack = {
+                        if (uiState.currentStep == SignupStep.PersonalInfo) onBack()
+                        else onAction(SignupIntent.PreviousStep)
+                    }
                 )
             }
         },

@@ -6,8 +6,10 @@ import androidx.room.RoomDatabase
 import androidx.room.RoomDatabaseConstructor
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.triapp.local.dao.NotificationDao
+import com.triapp.local.dao.RatingDao
 import com.triapp.local.dao.RideDao
 import com.triapp.local.entity.NotificationEntity
+import com.triapp.local.entity.RatingEntity
 import com.triapp.local.entity.RideEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -18,7 +20,8 @@ private const val DB_VERSION = 1
 @Database(
     entities = [
         NotificationEntity::class,
-        RideEntity::class
+        RideEntity::class,
+        RatingEntity::class
     ],
     version = 1
 )
@@ -26,6 +29,7 @@ private const val DB_VERSION = 1
 abstract class AppDatabase : RoomDatabase() {
     abstract fun notificationDao(): NotificationDao
     abstract fun rideDao(): RideDao
+    abstract fun ratingDao(): RatingDao
 }
 
 expect object AppDatabaseConstructor : RoomDatabaseConstructor<AppDatabase>
