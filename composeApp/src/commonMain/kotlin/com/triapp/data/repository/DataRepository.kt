@@ -2,14 +2,23 @@ package com.triapp.data.repository
 
 import com.triapp.data.ApiService
 import com.triapp.data.dtos.CardBody
-import com.triapp.data.dtos.StartTaxiBody
-import com.triapp.domain.model.LatLng
+import com.triapp.data.dtos.LocationDTO
+import com.triapp.data.dtos.RideRequestDTO
+import com.triapp.domain.model.Coordinate
 import com.triapp.domain.model.ProductDomainModel
 import com.triapp.domain.model.WalletDomainModel
 
 interface DataRepository {
     suspend fun fetchProducts(): List<ProductDomainModel>
-    suspend fun startTaxi(): String
+    suspend fun rideRequest(
+        riderId: String,
+        pickup: Coordinate,
+        pickupAddress: String,
+        dropoff: Coordinate,
+        dropoffAddress: String,
+        riderNote: String
+    ): String
+
     suspend fun cardOptions(model: WalletDomainModel): WalletDomainModel
 }
 
@@ -30,13 +39,29 @@ class DataRepositoryImpl(
         }
     }
 
-    override suspend fun startTaxi(): String {
-        return apiService.startTaxi(
-            StartTaxiBody(
-                latLngInit = LatLng(1.0, 1.0),
-                latLngEnd = LatLng(1.0, 1.0)
+    override suspend fun rideRequest(
+        riderId: String,
+        pickup: Coordinate,
+        pickupAddress: String,
+        dropoff: Coordinate,
+        dropoffAddress: String,
+        riderNote: String,
+
+        ): String {
+        return apiService.rideRequest(
+            RideRequestDTO(
+                riderId, LocationDTO(
+                    pickup.latitude,
+                    pickup.longitude,
+                    pickupAddress
+                ),
+                LocationDTO(
+                    dropoff.latitude,
+                    dropoff.longitude,
+                    dropoffAddress
+                ), riderNote
             )
-        )
+        ).tripId
     }
 
     override suspend fun cardOptions(model: WalletDomainModel): WalletDomainModel {

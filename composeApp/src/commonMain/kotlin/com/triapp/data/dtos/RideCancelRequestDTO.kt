@@ -4,7 +4,7 @@ import com.triapp.domain.model.LatLng
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class StartTaxiBody(
-    val latLngInit: LatLng,
-    val latLngEnd: LatLng,
+data class RideCancelRequestDTO(
+    val tripId: String,
+    val reason: String
 )

@@ -1,11 +1,14 @@
 package com.triapp.data.firestore
 
+import com.triapp.data.dtos.RideDriverDTO
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.firestore.firestore
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.takeWhile
 
 data class ListenResult(
-    val data: Map<String, Any?>,
+    val driver: RideDriverDTO,
     val status: String
 )
 
@@ -15,14 +18,28 @@ fun listenDocumentUntilDone(
 
     val db = Firebase.firestore
 
-    return db.collection("taxi")
+    return db.collection("trip_status")
         .document(documentId)
         .snapshots                          // Flow<DocumentSnapshot>
         .map { snapshot ->
             val data: Map<String, Any?> = snapshot.data() ?: emptyMap()
             val status = data["status"]?.toString() ?: "unknown"
+            val driver = snapshot.get("driver", RideDriverDTO.serializer())
 
-            ListenResult(data, status)
+            ListenResult(driver, status)
         }
-        .takeWhile { it.status != "done" }
+        .takeWhile { it.status != "COMPLETED" }
+}
+
+
+enum class TripStatus {
+    CREATED,
+    PRICING_AVAILABLE,
+    MATCHING_IN_PROGRESS,
+    DRIVER_REQUESTED,
+    ACCEPTED,
+    REJECTED,
+    CANCELLED,
+    ONGOING,
+    COMPLETED
 }

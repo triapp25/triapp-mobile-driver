@@ -11,8 +11,6 @@ plugins {
     alias(libs.plugins.firebase.crashlytics.plugin)
     alias(libs.plugins.kotlinSerialization)
     id("org.jetbrains.kotlin.native.cocoapods")
-
-    // --- CORREÇÃO 1: PLUGINS NECESSÁRIOS ---
     alias(libs.plugins.ksp)
     alias(libs.plugins.ktorfit)
 }
@@ -32,6 +30,10 @@ kotlin {
         }
     }
 
+    iosX64()
+    iosArm64()
+    iosSimulatorArm64()
+
     cocoapods {
         version = "1.0.0"
         summary = "Shared module for TriApp"
@@ -40,7 +42,7 @@ kotlin {
 
         framework {
             baseName = "ComposeApp"
-            isStatic = true
+            isStatic = false
         }
 
         pod("FirebaseCore") {
@@ -59,16 +61,16 @@ kotlin {
         }
     }
 
-    listOf(
-        iosX64(),
-        iosArm64(),
-        iosSimulatorArm64()
-    ).forEach { iosTarget ->
-        iosTarget.binaries.framework {
-            baseName = "ComposeApp"
-            isStatic = true
-        }
-    }
+    //listOf(
+    //    iosX64(),
+    //    iosArm64(),
+    //    iosSimulatorArm64()
+    //).forEach { iosTarget ->
+    //    iosTarget.binaries.framework {
+    //        baseName = "ComposeApp"
+    //        isStatic = true
+    //    }
+    //}
 
     sourceSets {
         androidMain.dependencies {
@@ -190,9 +192,6 @@ dependencies {
     add("kspIosArm64", ktorfitKsp)
     add("kspIosSimulatorArm64", ktorfitKsp)
 
-    // --- ROOM KSP (FALTAVA ISSO!) ---
-    // O Room precisa disso para gerar o código do banco de dados
-    //add("kspCommonMainMetadata", libs.room.compiler)
     add("kspAndroid", libs.room.compiler)
     add("kspIosX64", libs.room.compiler)
     add("kspIosArm64", libs.room.compiler)

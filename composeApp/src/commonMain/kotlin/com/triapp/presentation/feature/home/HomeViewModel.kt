@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import com.triapp.data.repository.MapboxSearchRepository
 import com.triapp.domain.model.*
 import com.triapp.domain.usecase.GetRatingLastUseCase
+import com.triapp.domain.usecase.TaxiUseCase
 import com.triapp.local.AppPreferences
 import com.triapp.presentation.BaseViewModel
 import com.triapp.utils.LocationRepository
@@ -22,6 +23,7 @@ class HomeViewModel(
     private val locationRepository: LocationRepository,
     private val mapboxRepository: MapboxSearchRepository,
     private val appPreferences: AppPreferences,
+    private val taxiUseCase: TaxiUseCase,
     initialState: HomeDomainModel = HomeDomainModel()
 ) : BaseViewModel<HomeDomainModel, HomeIntent, HomeEffect>(initialState) {
 
