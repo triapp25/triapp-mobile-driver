@@ -1,4 +1,4 @@
-rootProject.name = "TriApp"
+rootProject.name = "TriAppDriver"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {

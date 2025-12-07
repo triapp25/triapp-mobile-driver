@@ -37,7 +37,7 @@ kotlin {
     cocoapods {
         version = "1.0.0"
         summary = "Shared module for TriApp"
-        homepage = "https://github.com/yourorg/TriApp"
+        homepage = "https://github.com/yourorg/TriAppDriver"
         ios.deploymentTarget = "16.0"
 
         framework {
@@ -145,11 +145,11 @@ kotlin {
 }
 
 android {
-    namespace = "com.triapp"
+    namespace = "com.triappdriver"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {
-        applicationId = "com.triapp"
+        applicationId = "com.triappdriver"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1
