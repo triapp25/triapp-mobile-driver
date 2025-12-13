@@ -308,13 +308,13 @@ fun RideRequestNotification(
                 Spacer(Modifier.width(12.dp))
                 Column(verticalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxHeight()) {
                     Column {
-                        Text("Pickup", color = TextGray, fontSize = 12.sp)
+                        Text("Pegar", color = TextGray, fontSize = 12.sp)
                         Text(offer.pickupAddress, color = TextWhite, fontWeight = FontWeight.Bold)
-                        Text(offer.distanceToPickup + " away", color = TextGray, fontSize = 12.sp)
+                        Text(offer.distanceToPickup + " faltantes", color = TextGray, fontSize = 12.sp)
                     }
                     Spacer(Modifier.height(16.dp))
                     Column {
-                        Text("Dropoff", color = TextGray, fontSize = 12.sp)
+                        Text("Destino", color = TextGray, fontSize = 12.sp)
                         Text(offer.destinationAddress, color = TextWhite, fontWeight = FontWeight.Bold)
                     }
                 }
@@ -326,13 +326,13 @@ fun RideRequestNotification(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(Modifier.weight(1f).background(Color(0xFF2C2C2C), RoundedCornerShape(8.dp)).padding(12.dp)) {
                     Column {
-                        Text("Fare", color = TextGray, fontSize = 12.sp)
+                        Text("Valor", color = TextGray, fontSize = 12.sp)
                         Text(offer.estimatedFare, color = TextWhite, fontWeight = FontWeight.Bold)
                     }
                 }
                 Box(Modifier.weight(1f).background(Color(0xFF2C2C2C), RoundedCornerShape(8.dp)).padding(12.dp)) {
                     Column {
-                        Text("Duration", color = TextGray, fontSize = 12.sp)
+                        Text("Duração", color = TextGray, fontSize = 12.sp)
                         Text(offer.eta, color = TextWhite, fontWeight = FontWeight.Bold)
                     }
                 }
@@ -347,7 +347,7 @@ fun RideRequestNotification(
                     modifier = Modifier.weight(1f).height(50.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = TextWhite)
-                ) { Text("Decline") }
+                ) { Text("Recusar") }
 
                 Spacer(Modifier.width(12.dp))
 
@@ -356,7 +356,7 @@ fun RideRequestNotification(
                     modifier = Modifier.weight(1f).height(50.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = TextWhite, contentColor = Color.Black)
-                ) { Text("Accept") }
+                ) { Text("Aceitar") }
             }
         }
     }
@@ -374,7 +374,7 @@ fun EarningsDashboard(
     ) {
         Spacer(Modifier.height(20.dp))
 
-        Text("Today's earnings", color = TextGray, fontSize = 14.sp)
+        Text("Ganhos Hoje", color = TextGray, fontSize = 14.sp)
         Spacer(Modifier.height(8.dp))
 
         // Card Total Branco
@@ -393,7 +393,7 @@ fun EarningsDashboard(
                     Text(earnings, color = Color.Black, fontSize = 32.sp, fontWeight = FontWeight.Bold)
                 }
                 Box(Modifier.size(40.dp).background(Color(0xFFEEEEEE), RoundedCornerShape(8.dp))) {
-                    Text("$", modifier = Modifier.align(Alignment.Center), fontWeight = FontWeight.Bold, color = Color.Black)
+                    Text("R$", modifier = Modifier.align(Alignment.Center), fontWeight = FontWeight.Bold, color = Color.Black)
                 }
             }
         }
@@ -402,15 +402,15 @@ fun EarningsDashboard(
 
         // Grid Stats (3 colunas)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            DashboardStatItem(Icons.Default.FlashOn, "$rides", "Rides", Modifier.weight(1f))
+            DashboardStatItem(Icons.Default.FlashOn, "$rides", "Corridas", Modifier.weight(1f))
             DashboardStatItem(Icons.Outlined.Timer, hours, "Online", Modifier.weight(1f))
-            DashboardStatItem(Icons.Default.Star, rating, "Rating", Modifier.weight(1f))
+            DashboardStatItem(Icons.Default.Star, rating, "Avaliação", Modifier.weight(1f))
         }
 
         Spacer(Modifier.height(24.dp))
 
         // Mock Weekly Summary (para preencher espaço se expandir)
-        Text("Weekly summary", color = TextWhite, fontWeight = FontWeight.Bold)
+        Text("Resumo da Semana", color = TextWhite, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(8.dp))
         Box(Modifier.fillMaxWidth().height(100.dp).background(Color(0xFF2C2C2C), RoundedCornerShape(12.dp)))
     }
@@ -434,7 +434,7 @@ fun ActiveRideBottomPanel(step: HomeStep, viewModel: HomeViewModel) {
             else -> "Passageiro"
         }
 
-        val statusText = if (step is HomeStep.NavigatingToPickup) "En route to pickup" else "Trip in progress"
+        val statusText = if (step is HomeStep.NavigatingToPickup) "Em rota para buscar" else "Em rota para o destino"
 
         // Status Card flutuante (Ex: "En route to pickup - 8 min away")
         // No layout do print, isso aparece as vezes sobre o mapa, mas aqui vamos por no topo do sheet
@@ -443,7 +443,7 @@ fun ActiveRideBottomPanel(step: HomeStep, viewModel: HomeViewModel) {
             Spacer(Modifier.width(8.dp))
             Column {
                 Text(statusText, color = TextWhite, fontWeight = FontWeight.Bold)
-                Text("8 min away", color = TextGray, fontSize = 12.sp)
+                Text("8 min faltantes", color = TextGray, fontSize = 12.sp)
             }
         }
 
@@ -477,7 +477,7 @@ fun ActiveRideBottomPanel(step: HomeStep, viewModel: HomeViewModel) {
                     Icon(Icons.Default.Navigation, null, tint = TextWhite, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(12.dp))
                     Column {
-                        Text("Pickup", color = TextGray, fontSize = 12.sp)
+                        Text("Pegar", color = TextGray, fontSize = 12.sp)
                         Text("Rua Oscar Freire, 500", color = TextWhite, fontWeight = FontWeight.Bold)
                     }
                 }
@@ -487,7 +487,7 @@ fun ActiveRideBottomPanel(step: HomeStep, viewModel: HomeViewModel) {
                     Icon(Icons.Default.LocationOn, null, tint = TextWhite, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(12.dp))
                     Column {
-                        Text("Dropoff", color = TextGray, fontSize = 12.sp)
+                        Text("Destino", color = TextGray, fontSize = 12.sp)
                         Text("Shopping Iguatemi", color = TextWhite, fontWeight = FontWeight.Bold)
                     }
                 }
@@ -499,7 +499,7 @@ fun ActiveRideBottomPanel(step: HomeStep, viewModel: HomeViewModel) {
         // Fare e Botão
         Card(colors = CardDefaults.cardColors(containerColor = TextWhite)) {
             Row(Modifier.padding(16.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Trip fare", color = Color.Black)
+                Text("Ganho da corrida", color = Color.Black)
                 Text("R$ 20.95", color = Color.Black, fontWeight = FontWeight.Bold)
             }
         }
@@ -519,7 +519,7 @@ fun ActiveRideBottomPanel(step: HomeStep, viewModel: HomeViewModel) {
             colors = ButtonDefaults.buttonColors(containerColor = TextWhite, contentColor = Color.Black),
             modifier = Modifier.fillMaxWidth().height(50.dp)
         ) {
-            val label = if (step is HomeStep.NavigatingToPickup) "Mark as Arrived" else "Complete Trip"
+            val label = if (step is HomeStep.NavigatingToPickup) "Chegou ao destino" else "Corrida finalizada"
             Text(label, fontWeight = FontWeight.Bold)
         }
     }

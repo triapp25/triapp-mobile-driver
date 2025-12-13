@@ -57,7 +57,7 @@ class LoginViewModel(
                 phoneVerificationId = result.getOrNull()
                 sendEffect(LoginEffect.ShowSnackbar("SMS enviado"))
             } else {
-                sendEffect(LoginEffect.ShowError(result.exceptionOrNull()?.message ?: "Failed to send reset link"))
+                sendEffect(LoginEffect.ShowError(result.exceptionOrNull()?.message ?: "Falha ao enviar SMS"))
             }
 
             updateState { it.copy(isLoading = false) }
@@ -72,11 +72,11 @@ class LoginViewModel(
 
             val result = firebaseManager.verifyPhoneCode(id, code)
             if (result.isSuccess) {
-                sendEffect(LoginEffect.ShowSnackbar("Code verified successfully"))
+                sendEffect(LoginEffect.ShowSnackbar("Código verificado com sucesso"))
                 updateState { it.copy(step = LoginStep.Login) }
                 sendEffect(LoginEffect.NavigateToHome)
             } else {
-                sendEffect(LoginEffect.ShowError(result.exceptionOrNull()?.message ?: "Invalid code"))
+                sendEffect(LoginEffect.ShowError(result.exceptionOrNull()?.message ?: "Código inválido"))
             }
 
             updateState { it.copy(isLoading = false) }

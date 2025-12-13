@@ -87,14 +87,14 @@ fun TripRatingFlowScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                "Trip completed!",
+                "Corrida finalizada!",
                 color = MaterialTheme.colorScheme.primary,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                "How was your experience?",
+                "Como foi sua experiência?",
                 color = MaterialTheme.colorScheme.secondary,
                 fontSize = 16.sp
             )
@@ -122,7 +122,7 @@ fun TripRatingFlowScreen(
                     Spacer(modifier = Modifier.height(32.dp))
 
                     Text(
-                        "Rate the rider",
+                        "Avaluie sua corrida",
                         color = MaterialTheme.colorScheme.secondary,
                         fontSize = 14.sp
                     )
@@ -143,7 +143,7 @@ fun TripRatingFlowScreen(
                             Spacer(modifier = Modifier.height(32.dp))
 
                             Text(
-                                "What did you like most?",
+                                "O que você mais gostou?",
                                 color = MaterialTheme.colorScheme.secondary,
                                 fontSize = 14.sp
                             )
@@ -164,7 +164,7 @@ fun TripRatingFlowScreen(
                         )
                     ) {
                         Text(
-                            text = if (uiState.rating > 0) "Submit rating" else "Select a rating",
+                            text = if (uiState.rating > 0) "Enviar avaliação" else "Selecione uma avaliação",
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp
                         )
@@ -173,7 +173,7 @@ fun TripRatingFlowScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = "Skip",
+                        text = "Pular avaliação",
                         color = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.clickable {
                             onAction(RatingIntent.Skip)
@@ -198,7 +198,7 @@ fun StarRatingBar(rating: Int, onRatingChanged: (Int) -> Unit) {
         for (i in 1..5) {
             Icon(
                 imageVector = Icons.Default.Star,
-                contentDescription = "Star $i",
+                contentDescription = "Estrela $i",
                 tint = if (i <= rating) MaterialTheme.colorScheme.primary else Color(0xFF3A3A3C), // Branco se selecionado, Cinza escuro se vazio
                 modifier = Modifier
                     .size(40.dp)
@@ -258,7 +258,7 @@ fun DriverInfoRow(
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                name.ifEmpty { "Rider" },
+                name.ifEmpty { "Usuário" },
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp

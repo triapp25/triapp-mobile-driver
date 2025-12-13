@@ -91,7 +91,7 @@ fun SignupFlowScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
                     Text(
-                        text = "Continue",
+                        text = "Continuar",
                         color = Color.Black,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
@@ -162,7 +162,7 @@ fun SignupTopBar(step: SignupStep, onBack: () -> Unit) {
             ) {
                 Icon(
                     Icons.Default.ArrowBack,
-                    contentDescription = "Back",
+                    contentDescription = "Voltar",
                     tint = MaterialTheme.colorScheme.primary
                 )
             }
@@ -196,9 +196,9 @@ fun SignupTopBar(step: SignupStep, onBack: () -> Unit) {
 @Composable
 fun StepPersonalInfo(uiState: SignUpDomainModel, onAction: (SignupIntent) -> Unit) {
     Column {
-        Text("Personal Information", color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
+        Text("Informações Pessoais", color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
         Text(
-            "Tell us about yourself",
+            "Como devemos chamar você?",
             color = MaterialTheme.colorScheme.primary,
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold
@@ -206,10 +206,10 @@ fun StepPersonalInfo(uiState: SignUpDomainModel, onAction: (SignupIntent) -> Uni
         Spacer(modifier = Modifier.height(32.dp))
 
         CustomTextField(
-            label = "Full name",
+            label = "Nome Completo",
             value = uiState.fullName,
             onValueChange = { onAction(SignupIntent.EnterFullName(it)) },
-            placeholder = "John Doe"
+            placeholder = "João da Silva",
         )
     }
 }
@@ -218,9 +218,9 @@ fun StepPersonalInfo(uiState: SignUpDomainModel, onAction: (SignupIntent) -> Uni
 fun StepContact(activity: Any?, uiState: SignUpDomainModel, onAction: (SignupIntent) -> Unit) {
     var phoneNumber by remember { mutableStateOf("") }
     Column {
-        Text("Contact details", color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
+        Text("Informção de contato", color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
         Text(
-            "How can we reach you?",
+            "Como podemos entrar em contato com você?",
             color = MaterialTheme.colorScheme.primary,
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold
@@ -373,7 +373,7 @@ fun StepBanking(uiState: SignUpDomainModel, onAction: (SignupIntent) -> Unit) {
 @Composable
 fun StepCar(uiState: SignUpDomainModel, onAction: (SignupIntent) -> Unit) {
     Column {
-        Text("Secure your account", color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
+        Text("Dados de Segurança", color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
 
         CustomTextField(
             label = "Placa",
@@ -428,24 +428,24 @@ fun StepDocuments(
     }
 
     Column {
-        Text("Document verification", color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
+        Text("Verificação de Documento", color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
         Text(
-            "Verify your identity",
+            "Verificação de identidade para segurança adicional",
             color = MaterialTheme.colorScheme.primary,
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(32.dp))
 
-        Text("Profile photo", color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
+        Text("Foto do Perfil", color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
         Text(
-            "A clear photo of your face",
+            "Foto clara do seu rosto",
             color = MaterialTheme.colorScheme.secondary,
             fontSize = 12.sp
         )
         Spacer(modifier = Modifier.height(8.dp))
 
-        DocumentUploadCard(title = "Drop your file here or browse") {
+        DocumentUploadCard(title = "Deixe sua foto aqui ou procure") {
             pickerLauncherFirst.launch()
         }
 
@@ -457,15 +457,15 @@ fun StepDocuments(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Text("ID Document", color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
+        Text("", color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
         Text(
-            "Government-issued ID or passport",
+            "Documento oficial com foto (RG, CNH, Passaporte)",
             color = MaterialTheme.colorScheme.secondary,
             fontSize = 12.sp
         )
         Spacer(modifier = Modifier.height(8.dp))
 
-        DocumentUploadCard(title = "Drop your file here or browse") {
+        DocumentUploadCard(title = "Deixe sua foto aqui ou procure") {
             pickerLauncherSecond.launch()
         }
 
@@ -605,13 +605,13 @@ fun StepSuccess(data: SignUpDomainModel, onFinish: () -> Unit) {
 
         Spacer(modifier = Modifier.height(24.dp))
         Text(
-            "All set!",
+            "Tudo pronto!",
             color = MaterialTheme.colorScheme.primary,
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold
         )
         Text(
-            "Your account has been created successfully",
+            "Sua conta foi criada com sucesso.",
             color = MaterialTheme.colorScheme.secondary,
             textAlign = TextAlign.Center
         )
@@ -641,7 +641,7 @@ fun StepSuccess(data: SignUpDomainModel, onFinish: () -> Unit) {
             shape = RoundedCornerShape(28.dp),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
         ) {
-            Text("Get started", color = Color.Black, fontWeight = FontWeight.Bold)
+            Text("Pronto", color = Color.Black, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.width(8.dp))
             Icon(Icons.Default.ChevronRight, null, tint = Color.Black)
         }
@@ -722,7 +722,7 @@ fun DocumentUploadCard(title: String, onClick: () -> Unit) {
                 ) {
                     Icon(Icons.Default.Image, null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Gallery", fontSize = 12.sp)
+                    Text("Galeria", fontSize = 12.sp)
                 }
                 //Spacer(modifier = Modifier.width(12.dp))
                 //Button(

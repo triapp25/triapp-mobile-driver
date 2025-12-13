@@ -57,7 +57,7 @@ class SignupViewModel(
 
     private fun goToNextStep() {
         if (!state.value.canContinue) {
-            sendEffect(SignupEffect.ShowError("Complete all required fields."))
+            sendEffect(SignupEffect.ShowError("Complete os campos obrigatórios"))
             return
         }
 
@@ -104,12 +104,12 @@ class SignupViewModel(
                 } else {
                     sendEffect(
                         SignupEffect.ShowError(
-                            result.exceptionOrNull()?.message ?: "Failed to send SMS"
+                            result.exceptionOrNull()?.message ?: "Falha ao enviar SMS"
                         )
                     )
                 }
             } catch (t: Throwable) {
-                sendEffect(SignupEffect.ShowError(t.message ?: "Unknown error"))
+                sendEffect(SignupEffect.ShowError(t.message ?: "Erro desconhecido"))
             }
         }
     }
@@ -125,12 +125,12 @@ class SignupViewModel(
                 } else {
                     sendEffect(
                         SignupEffect.ShowError(
-                            result.exceptionOrNull()?.message ?: "Failed to send SMS"
+                            result.exceptionOrNull()?.message ?: "Falha ao enviar SMS"
                         )
                     )
                 }
             } catch (t: Throwable) {
-                sendEffect(SignupEffect.ShowError(t.message ?: "Unknown error"))
+                sendEffect(SignupEffect.ShowError(t.message ?: "Erro desconhecido"))
             }
         }
     }
@@ -139,7 +139,7 @@ class SignupViewModel(
         viewModelScope.launch {
             val id = phoneVerificationId
             if (id == null) {
-                sendEffect(SignupEffect.ShowError("Verification id missing"))
+                sendEffect(SignupEffect.ShowError("Verificação não iniciada"))
                 return@launch
             }
 
@@ -156,7 +156,7 @@ class SignupViewModel(
                     )
                 }
             } catch (t: Throwable) {
-                sendEffect(SignupEffect.ShowError(t.message ?: "Unknown error"))
+                sendEffect(SignupEffect.ShowError(t.message ?: "Erro desconhecido"))
             }
         }
     }
@@ -190,7 +190,7 @@ class SignupViewModel(
             SignupStep.Success ->
                 true
 
-            SignupStep.Banking -> TODO()
+            SignupStep.Banking -> true
         }
     }
 

@@ -200,8 +200,8 @@ fun RideLoginScreen(
     ) {
         // Logo Section
         AppLogo(
-            title = "Ride",
-            subtitle = "Urban mobility reimagined",
+            title = "Driver",
+            subtitle = "Mobilidade que conecta pessoas e lugares",
             icon = Icons.Outlined.LocationOn
         )
 
@@ -219,7 +219,7 @@ fun RideLoginScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Welcome back",
+                    text = "Bem vindo de volta",
                     color = MaterialTheme.colorScheme.primary,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Medium,
@@ -227,7 +227,7 @@ fun RideLoginScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Sign in with your phone number",
+                    text = "Entre com seu número de telefone para continuar",
                     color = MaterialTheme.colorScheme.secondary,
                     fontSize = 14.sp,
                     modifier = Modifier.align(Alignment.Start)
@@ -245,14 +245,14 @@ fun RideLoginScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                AppButton(text = "Continue", onClick = { onLoginClick(phoneNumber) })
+                AppButton(text = "Continar", onClick = { onLoginClick(phoneNumber) })
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 val signUpText = buildAnnotatedString {
-                    append("Don't have an account? ")
+                    append("Você é novo aqui? ")
                     pushStringAnnotation(tag = "signup", annotation = "signup")
                     withStyle(
                         style = SpanStyle(
@@ -260,7 +260,7 @@ fun RideLoginScreen(
                             textDecoration = TextDecoration.Underline
                         )
                     ) {
-                        append("Sign up")
+                        append("Criar uma conta")
                     }
                     pop()
                 }
@@ -282,10 +282,10 @@ fun RideLoginScreen(
 
         // Footer
         val termsText = buildAnnotatedString {
-            append("By continuing, you agree to our ")
-            pushStringAnnotation(tag = "terms", annotation = "terms")
+            append("Para saber mais, leia nossos ")
+            pushStringAnnotation(tag = "Termos", annotation = "Termos")
             withStyle(style = SpanStyle(textDecoration = TextDecoration.Underline)) {
-                append("Terms of Service")
+                append("Termos de Serviço")
             }
             pop()
         }
