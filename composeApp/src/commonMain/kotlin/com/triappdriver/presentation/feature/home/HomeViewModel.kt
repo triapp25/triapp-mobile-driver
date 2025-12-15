@@ -25,9 +25,6 @@ class HomeViewModel(
     // Job para controlar o listener do Firestore
     private var firestoreListenerJob: Job? = null
 
-    // ID fixo para teste conforme solicitado. Em produção, viria de uma notificação ou oferta.
-    private val currentTripId = "b8980647-53dc-4d13-a81b-d3a434161cab"
-
     init {
         restoreSession()
     }
@@ -47,7 +44,8 @@ class HomeViewModel(
             HomeIntent.EndRide -> updateRideStatus("COMPLETED")
 
             // --- Outros ---
-            HomeIntent.AcceptEarlyRide -> { /* Lógica para próxima corrida em fila */ }
+            HomeIntent.AcceptEarlyRide -> { /* Lógica para próxima corrida em fila */
+            }
 
             // Intents de simulação removidos (StartSimulation, SimulateArrival, etc)
             else -> {}
@@ -59,30 +57,16 @@ class HomeViewModel(
     // -----------------------------------------------------
     private fun goOnline() {
         updateState { it.copy(step = OnlineSearching, isOnline = true) }
-
-        // Simula apenas o recebimento da oferta para iniciar o fluxo.
-        // O resto do fluxo será REAL via Firestore.
         viewModelScope.launch {
-            if (state.value.isOnline) {
-                updateState {
-                    it.copy(
-                        step = RideOffer(
-                            passengerName = "Novo Passageiro", // Viria do backend na oferta
-                            pickupAddress = "Aguardando endereço...",
-                            destinationAddress = "Aguardando destino...",
-                            distanceToPickup = "calculando...",
-                            estimatedFare = "R$ --,--",
-                            eta = "-- min"
-                        )
-                    )
-                }
+            taxiUseCase.enabledOnline().collect { taxiState ->
+                handleTaxiState(taxiState)
             }
         }
     }
 
     private fun goOffline() {
         stopFirestoreListener()
-        updateState { it.copy(step = HomeStep.Offline, isOnline = false) }
+        updateState { it.copy(step = Offline, isOnline = false) }
     }
 
     // -----------------------------------------------------
@@ -143,9 +127,25 @@ class HomeViewModel(
      */
     private fun handleTaxiState(taxiState: TaxiState) {
         when (taxiState) {
+            is TaxiState.Online -> {
+                updateState {
+                    it.copy(
+                        step = RideOffer(
+                            passengerName = taxiState.rider.name.orEmpty(), // Viria do backend na oferta
+                            pickupAddress = taxiState.rider.pickup.name.orEmpty(),
+                            destinationAddress = taxiState.rider.rider.location.name.orEmpty(),
+                            distanceToPickup = "calculando...",
+                            estimatedFare = "R$ --,--",
+                            eta = "-- min"
+                        )
+                    )
+                }
+            }
+
             is TaxiState.Update -> {
                 val driverData = taxiState.driverDTO // Dados vindos do DTO
-                val status = taxiState.status     // Status vindo do Firestore (ACCEPTED, ARRIVED, etc)
+                val status =
+                    taxiState.status     // Status vindo do Firestore (ACCEPTED, ARRIVED, etc)
 
                 // Define o próximo passo da UI baseado no status do banco
                 val nextStep = when (status) {
@@ -155,6 +155,7 @@ class HomeViewModel(
                             pickupAddress = "Verificar coordenadas no DTO"
                         )
                     }
+
                     "ARRIVED" -> {
                         // Mantém na tela de pickup, mas muda o texto ou estado interno se necessário
                         // Ou se tiver um step específico: HomeStep.WaitingForPassenger
@@ -163,6 +164,7 @@ class HomeViewModel(
                             pickupAddress = "Aguardando embarque..."
                         )
                     }
+
                     "IN_PROGRESS" -> {
                         InProgress(
                             passengerName = "Passageiro",
@@ -170,10 +172,12 @@ class HomeViewModel(
                             timeRemainingMinutes = 0 // Calcular real com MapBox
                         )
                     }
+
                     "COMPLETED" -> {
                         // Será tratado no bloco TaxiState.Completed abaixo ou aqui
                         RideCompleted("Passageiro")
                     }
+
                     else -> state.value.step // Mantém estado atual se status desconhecido
                 }
 

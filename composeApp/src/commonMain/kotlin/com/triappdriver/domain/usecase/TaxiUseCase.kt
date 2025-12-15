@@ -1,6 +1,7 @@
 package com.triappdriver.domain.usecase
 
 import com.triappdriver.data.firestore.listenDocumentUntilDone
+import com.triappdriver.data.firestore.listenOnline
 import com.triappdriver.data.repository.DataRepository
 import com.triappdriver.domain.model.TaxiState
 import dev.gitlive.firebase.Firebase
@@ -9,9 +10,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 
-class TaxiUseCase(
-    private val repository: DataRepository
-) {
+class TaxiUseCase() {
 
     private val db = Firebase.firestore
 
@@ -39,5 +38,15 @@ class TaxiUseCase(
             // Tratar erro de conexão se necessário
             e.printStackTrace()
         }
+    }
+
+    suspend fun enabledOnline(): Flow<TaxiState> = flow {
+        listenOnline()
+            .catch { e -> emit(TaxiState.Error(e.message ?: "Erro desconhecido")) }
+            .collect { result ->
+                // Emite o estado atualizado com os dados vindos do banco
+                emit(TaxiState.Online(result))
+
+            }
     }
 }
