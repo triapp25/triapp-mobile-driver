@@ -35,10 +35,10 @@ fun listenDocumentUntilDone(documentId: String): Flow<ListenResult> {
 
             ListenResult(driver, status)
         }
-        .takeWhile {  it.status != "COMPLETED"  }
+        .takeWhile { it.status != "COMPLETED" }
 }
 
-fun listenOnline(): Flow<RiderFirebaseDTO> {
+fun listenOnline(): Flow<RiderFirebaseDTO?> { // Adjusted return type to be nullable (safer for Flows)
     val db = Firebase.firestore
     val auth = Firebase.auth
 
@@ -48,17 +48,18 @@ fun listenOnline(): Flow<RiderFirebaseDTO> {
 
     return collectionRef.snapshots
         .map { snapshot ->
-            // Mapear cada documento no CollectionSnapshot
-            snapshot.documents.firstOrNull { documentSnapshot ->
+            // 1. Mapeia todos os documentos para RiderFirebaseDTO? (ou null em caso de erro/falha)
+            val mappedRides: List<RiderFirebaseDTO?> = snapshot.documents.map { documentSnapshot ->
                 try {
-                    val dataMap = documentSnapshot.data()
-                    mapDocumentToRideRequest(dataMap)
-
+                    mapDocumentToRideRequest(documentSnapshot.data())
                 } catch (e: Exception) {
                     println("Erro ao mapear documento: $e")
-                    null // Ignora documentos com erro de mapeamento
+                    null
                 }
             }
+
+            // 2. Encontra o primeiro que não é nulo.
+            mappedRides.firstOrNull { it != null }
         }
 }
 
@@ -66,7 +67,8 @@ fun mapDocumentToRideRequest(data: Map<String, Any?>): RiderFirebaseDTO? {
     // Tente pegar os valores do mapa, fazendo casts seguros
     val status = data["status"] as? String ?: return null
     val tripId = data["tripId"] as? String ?: return null
-    val acceptedAt = data["acceptedAt"] as? String // Exemplo: 13 de dezembro de 2025 às 00:25:20 UTC
+    val acceptedAt =
+        data["acceptedAt"] as? String // Exemplo: 13 de dezembro de 2025 às 00:25:20 UTC
     val createdAt = data["createdAt"] as? String
 
     // Mapear 'pickup'
@@ -79,6 +81,8 @@ fun mapDocumentToRideRequest(data: Map<String, Any?>): RiderFirebaseDTO? {
     val riderMap = data["rider"] as? Map<String, Any?> ?: return null
     val rating = riderMap["rating"] as? Double ?: 0.0
     val riderId = riderMap["riderId"] as? String ?: ""
+    val riderName = riderMap["name"] as? String // <-- NOVO
+    val riderNote = riderMap["note"] as? String // <-- NOVO
 
     // Mapear 'rider.location'
     val riderLocationMap = riderMap["location"] as? Map<String, Any?> ?: return null
@@ -95,7 +99,9 @@ fun mapDocumentToRideRequest(data: Map<String, Any?>): RiderFirebaseDTO? {
     val riderInfo = RiderInfoFirebaseDTO(
         location = riderLocation,
         rating = rating,
-        riderId = riderId
+        riderId = riderId,
+        name = riderName,
+        note = riderNote
     )
 
     return RiderFirebaseDTO(

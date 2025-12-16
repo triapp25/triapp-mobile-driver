@@ -36,6 +36,7 @@ data class LocationFirebaseDTO(
 data class RiderInfoFirebaseDTO(
     val location: LocationFirebaseDTO,
     val rating: Double,
-    val riderId: String
-    // Note que o campo "location" dentro de "rider" tem o nome e as coordenadas
+    val riderId: String,
+    val name: String? = null, // NOVO CAMPO: Nome do passageiro
+    val note: String? = null // NOVO CAMPO: Nota/instrução de embarque
 )

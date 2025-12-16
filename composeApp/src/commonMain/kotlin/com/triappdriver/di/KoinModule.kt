@@ -5,6 +5,7 @@ import androidx.sqlite.SQLiteDriver
 import com.russhwolf.settings.ObservableSettings
 import com.russhwolf.settings.Settings
 import com.triappdriver.data.ApiService
+import com.triappdriver.data.MapboxApiService
 import com.triappdriver.data.NetworkProvider
 import com.triappdriver.data.repository.DataRepository
 import com.triappdriver.data.repository.DataRepositoryImpl
@@ -45,14 +46,20 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngineFactory
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
+import io.ktor.client.request.accept
+import io.ktor.http.ContentType
+import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel
+import org.koin.core.qualifier.named
 import org.koin.dsl.bind
 import org.koin.dsl.module
 
 expect fun getPlatformHttpClientEngineFactory(): HttpClientEngineFactory<*>
+private val KtorfitDefault = named("ktorfitDefault")
+private val KtorfitMapbox = named("ktorfitMapbox")
 
 val networkModule = module {
 
@@ -72,13 +79,19 @@ val networkModule = module {
         //val config: TenantConfig = get<TenantConfig>()
         HttpClient(engineFactory = get<HttpClientEngineFactory<*>>()) {
             install(ContentNegotiation) {
-                json(get())
+                json(
+                    Json {
+                        ignoreUnknownKeys = true
+                        encodeDefaults = true
+                        prettyPrint = false
+                    }
+                )
             }
-            // Configuração Multi-Tenant no Ktor:
+            // Optional but recommended:
             defaultRequest {
-                url("")
-                //url(config.baseUrl)
-                //header("X-Tenant-Id", config.tenantId)
+                url("https://triapp-trips-6967168117.us-east1.run.app")
+                contentType(ContentType.Application.Json)
+                accept(ContentType.Application.Json)
             }
         }
     }
@@ -88,6 +101,17 @@ val networkModule = module {
         Ktorfit.Builder()
             .httpClient(get<HttpClient>())
             .build()
+    }
+
+    single(KtorfitMapbox) {
+        Ktorfit.Builder()
+            .baseUrl("https://api.mapbox.com/")
+            .httpClient(get<HttpClient>())
+            .build()
+    }
+
+    single<MapboxApiService> {
+        get<Ktorfit>(KtorfitMapbox).create()
     }
 
     single<ApiService> { get<Ktorfit>().create() }
@@ -111,7 +135,9 @@ val repositoryModule = module {
     single { LocationRepository(get()) }
     single<RideRepository> { RideRepositoryImpl(get()) }
     single<RatingRepository> { RatingRepositoryImpl(get(), get()) }
-    single<MapboxSearchRepository> { MapboxSearchRepositoryImpl() }
+    single<MapboxSearchRepository> {
+        MapboxSearchRepositoryImpl(get<MapboxApiService>(), apiKey = "pk.eyJ1Ijoia3Nkcm9mNTAwIiwiYSI6ImNtaGd4aWUxYzBrdTYyanE2NDZ3a21qcm8ifQ.26WRX_w_Xj7CoYoHVn35Ng")
+    }
 
     //single<MapController> { DefaultMapController() }
     single<LocationProvider> { LocationProvider() }
@@ -120,7 +146,7 @@ val repositoryModule = module {
 
 val domainModule = module {
     single { GetDataUseCase(get()) }
-    single { TaxiUseCase(get()) }
+    single { TaxiUseCase() }
     single { SaveSignUpDraftUseCase(get()) }
     single { GetSignUpDraftUseCase(get(), get()) }
     single { SendRatingUseCase(get()) }

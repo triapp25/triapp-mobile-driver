@@ -35,6 +35,7 @@ import dev.icerock.moko.permissions.Permission
 import dev.icerock.moko.permissions.location.LOCATION
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
+import kotlin.math.roundToInt
 
 // --- CORES DO TEMA ---
 val DarkCardColor = Color(0xFF1E1E1E)
@@ -52,11 +53,9 @@ fun DriverHomeScreen(
     val viewModel = koinViewModel<HomeViewModel>()
     val uiState by viewModel.state.collectAsState()
 
-    // Controle do Drawer Lateral
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
-    // Efeitos de Navegação
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
             if (effect is HomeEffect.NavigateToConfirmation) {
@@ -65,12 +64,10 @@ fun DriverHomeScreen(
         }
     }
 
-    // Fecha o drawer ao clicar em Voltar (se estiver aberto)
     BackHandler(enabled = drawerState.isOpen) {
         scope.launch { drawerState.close() }
     }
 
-    // Estado do BottomSheet
     val scaffoldState = rememberBottomSheetScaffoldState(
         bottomSheetState = rememberStandardBottomSheetState(
             initialValue = SheetValue.Expanded,
@@ -79,6 +76,7 @@ fun DriverHomeScreen(
     )
 
     LaunchedEffect(uiState.step) {
+        // Controla se o sheet está visível (RideOffer) ou expandido (Ativo/Offline)
         if (uiState.step is HomeStep.RideOffer) {
             scaffoldState.bottomSheetState.partialExpand()
         } else {
@@ -99,18 +97,18 @@ fun DriverHomeScreen(
         BottomSheetScaffold(
             scaffoldState = scaffoldState,
             containerColor = MaterialTheme.colorScheme.background,
-            sheetContainerColor = DarkCardColor, // Fundo escuro para o sheet
+            sheetContainerColor = DarkCardColor,
             sheetContentColor = TextWhite,
-            sheetPeekHeight = 160.dp, // Altura quando recolhido
+            sheetPeekHeight = 160.dp,
             sheetShape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
 
-            // --- CONTEÚDO DA BOTTOM SHEET (O que sobe e desce) ---
+            // --- CONTEÚDO DA BOTTOM SHEET ---
             sheetContent = {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .wrapContentHeight()
-                        .navigationBarsPadding() // Importante para não cortar no Android 10+
+                        .navigationBarsPadding()
                         .padding(horizontal = 24.dp)
                 ) {
                     AnimatedContent(
@@ -121,7 +119,7 @@ fun DriverHomeScreen(
                         }
                     ) { step ->
                         when (step) {
-                            // Dashboard (Mostra quando Offline, Buscando ou com Oferta na tela)
+                            // Dashboard
                             is HomeStep.Offline,
                             is HomeStep.OnlineSearching,
                             is HomeStep.RideOffer -> {
@@ -134,10 +132,12 @@ fun DriverHomeScreen(
                             }
 
                             // Painel de Corrida Ativa
-                            is HomeStep.NavigatingToPickup -> ActiveRideBottomPanel(step, viewModel)
-                            is HomeStep.InProgress -> ActiveRideBottomPanel(step, viewModel)
-                            is HomeStep.NearingDestination -> ActiveRideBottomPanel(step, viewModel)
-                            is HomeStep.RideCompleted -> ActiveRideBottomPanel(step, viewModel)
+                            is HomeStep.NavigatingToPickup,
+                            is HomeStep.InProgress,
+                            is HomeStep.NearingDestination,
+                            is HomeStep.RideCompleted -> {
+                                ActiveRideBottomPanel(step, viewModel)
+                            }
                         }
                     }
                 }
@@ -149,8 +149,8 @@ fun DriverHomeScreen(
 
                     // 1. MAPA (Camada de Fundo)
                     SimulatedMap(
-                        driverPosition = uiState.driverPosition,
-                        route = uiState.routePolyline
+                        riderPosition = uiState.driverPosition,
+                        routePolyline = uiState.routePolyline
                     )
 
                     // 2. BARRA SUPERIOR (Camada Topo Fixa)
@@ -169,14 +169,13 @@ fun DriverHomeScreen(
                     )
 
                     // 3. NOTIFICAÇÃO DE NOVA CORRIDA (Camada Topo Flutuante)
-                    // Aparece SOBRE o mapa, logo abaixo da barra superior
                     AnimatedVisibility(
                         visible = uiState.step is HomeStep.RideOffer,
                         enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
                         exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut(),
                         modifier = Modifier
                             .align(Alignment.TopCenter)
-                            .padding(top = 40.dp) // Espaço para não cobrir a TopBar
+                            .padding(top = 40.dp)
                     ) {
                         (uiState.step as? HomeStep.RideOffer)?.let { offer ->
                             RideRequestNotification(
@@ -417,116 +416,6 @@ fun EarningsDashboard(
 }
 
 @Composable
-fun ActiveRideBottomPanel(step: HomeStep, viewModel: HomeViewModel) {
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)
-    ) {
-        // Drag Handle
-        Box(
-            modifier = Modifier.width(40.dp).height(4.dp).background(Color.Gray, CircleShape).align(Alignment.CenterHorizontally)
-        )
-        Spacer(Modifier.height(20.dp))
-
-        // Determina dados baseados no step
-        val passengerName = when (step) {
-            is HomeStep.NavigatingToPickup -> step.passengerName
-            is HomeStep.InProgress -> step.passengerName
-            else -> "Passageiro"
-        }
-
-        val statusText = if (step is HomeStep.NavigatingToPickup) "Em rota para buscar" else "Em rota para o destino"
-
-        // Status Card flutuante (Ex: "En route to pickup - 8 min away")
-        // No layout do print, isso aparece as vezes sobre o mapa, mas aqui vamos por no topo do sheet
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Navigation, null, tint = Color.Blue)
-            Spacer(Modifier.width(8.dp))
-            Column {
-                Text(statusText, color = TextWhite, fontWeight = FontWeight.Bold)
-                Text("8 min faltantes", color = TextGray, fontSize = 12.sp)
-            }
-        }
-
-        Spacer(Modifier.height(20.dp))
-
-        // Passageiro Card
-        Card(
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF2C2C2C)),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Person, null, tint = TextWhite, modifier = Modifier.size(32.dp))
-                Spacer(Modifier.width(16.dp))
-                Column {
-                    Text(passengerName, color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                    Text("5.0 ★", color = TextGray)
-                }
-            }
-        }
-
-        Spacer(Modifier.height(12.dp))
-
-        // Trip Details
-        Card(
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF2C2C2C)),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(Modifier.padding(16.dp)) {
-                // Pickup
-                Row {
-                    Icon(Icons.Default.Navigation, null, tint = TextWhite, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(12.dp))
-                    Column {
-                        Text("Pegar", color = TextGray, fontSize = 12.sp)
-                        Text("Rua Oscar Freire, 500", color = TextWhite, fontWeight = FontWeight.Bold)
-                    }
-                }
-                Spacer(Modifier.height(16.dp))
-                // Dropoff
-                Row {
-                    Icon(Icons.Default.LocationOn, null, tint = TextWhite, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(12.dp))
-                    Column {
-                        Text("Destino", color = TextGray, fontSize = 12.sp)
-                        Text("Shopping Iguatemi", color = TextWhite, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-        }
-
-        Spacer(Modifier.height(20.dp))
-
-        // Fare e Botão
-        Card(colors = CardDefaults.cardColors(containerColor = TextWhite)) {
-            Row(Modifier.padding(16.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Ganho da corrida", color = Color.Black)
-                Text("R$ 20.95", color = Color.Black, fontWeight = FontWeight.Bold)
-            }
-        }
-
-        Spacer(Modifier.height(12.dp))
-
-        Button(
-            onClick = {
-                when (step) {
-                    is HomeStep.NavigatingToPickup -> viewModel.processIntent(HomeIntent.ArrivedAtPickup)
-                    is HomeStep.InProgress -> viewModel.processIntent(HomeIntent.EndRide)
-                    is HomeStep.NearingDestination -> viewModel.processIntent(HomeIntent.EndRide)
-                    is HomeStep.RideCompleted -> viewModel.processIntent(HomeIntent.EndRide)
-                    else -> {}
-                }
-            },
-            colors = ButtonDefaults.buttonColors(containerColor = TextWhite, contentColor = Color.Black),
-            modifier = Modifier.fillMaxWidth().height(50.dp)
-        ) {
-            val label = if (step is HomeStep.NavigatingToPickup) "Chegou ao destino" else "Corrida finalizada"
-            Text(label, fontWeight = FontWeight.Bold)
-        }
-    }
-}
-
-// Helpers
-@Composable
 fun DashboardStatItem(icon: ImageVector, value: String, label: String, modifier: Modifier) {
     Column(
         modifier = modifier
@@ -542,11 +431,194 @@ fun DashboardStatItem(icon: ImageVector, value: String, label: String, modifier:
 }
 
 @Composable
-fun SimulatedMap(driverPosition: LatLng?, route: List<LatLng>) {
+fun ActiveRideBottomPanel(step: HomeStep, viewModel: HomeViewModel) {
+    // Obtém o estado atualizado do ViewModel
+    val uiState by viewModel.state.collectAsState()
+
+    // EXTRAÇÃO DE DADOS DINÂMICOS DO VIEWMODEL
+    val passengerName = uiState.currentRiderName.orEmpty()
+    val pickupAddress = uiState.currentPickupAddress.orEmpty()
+    val destinationAddress = uiState.currentDestinationAddress.orEmpty()
+    val fare = uiState.currentFare
+    val passengerNote = uiState.currentPassengerNote
+
+    // Cálculo de tempo e distância (vindos do Mapbox via ViewModel)
+    val etaMinutes = uiState.etaMinutes
+    val distanceMeters = uiState.distanceMeters
+
+    // Formatação da Distância
+    val distanceKm = if (distanceMeters > 1000) {
+        "${(distanceMeters / 1000.0).roundToInt()} km"
+    } else if (distanceMeters > 0) {
+        "${distanceMeters} m"
+    } else {
+        "Calculando..."
+    }
+    val timeText = if (etaMinutes > 0) "$etaMinutes min" else "Calculando..."
+
+
+    // Lógica do Step e Ações
+    val statusText: String
+    val actionButtonLabel: String
+    val actionIntent: HomeIntent
+    val showDropoff: Boolean
+    val showFare: Boolean
+
+    when (step) {
+        is HomeStep.NavigatingToPickup -> {
+            statusText = "Em rota para buscar o passageiro"
+            actionButtonLabel = "Cheguei ao local de embarque"
+            actionIntent = HomeIntent.ArrivedAtPickup
+            showDropoff = true
+            showFare = false
+        }
+        is HomeStep.InProgress -> {
+            statusText = "Viagem em andamento para o destino"
+            actionButtonLabel = "Finalizar Corrida"
+            actionIntent = HomeIntent.EndRide
+            showDropoff = true
+            showFare = true
+        }
+        is HomeStep.RideCompleted -> {
+            statusText = "Corrida finalizada"
+            actionButtonLabel = "Ver Resumo e Avaliar"
+            actionIntent = HomeIntent.EndRide
+            showDropoff = true
+            showFare = true
+        }
+        is HomeStep.NearingDestination -> {
+            statusText = "Próximo ao destino"
+            actionButtonLabel = "Finalizar Corrida"
+            actionIntent = HomeIntent.EndRide
+            showDropoff = true
+            showFare = true
+        }
+        else -> return
+    }
+
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)
+    ) {
+        // Drag Handle
+        Box(
+            modifier = Modifier.width(40.dp).height(4.dp).background(Color.Gray, CircleShape).align(Alignment.CenterHorizontally)
+        )
+        Spacer(Modifier.height(20.dp))
+
+        // Status Card flutuante (Com ETA e Distância dinâmicos)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.Navigation, null, tint = Color.Blue)
+            Spacer(Modifier.width(8.dp))
+            Column {
+                Text(statusText, color = TextWhite, fontWeight = FontWeight.Bold)
+                // VALOR DINÂMICO DE TEMPO E DISTÂNCIA
+                Text(
+                    text = "$timeText ($distanceKm faltantes)",
+                    color = TextGray,
+                    fontSize = 12.sp
+                )
+            }
+        }
+
+        Spacer(Modifier.height(20.dp))
+
+        // Passageiro Card (Nome e Rating Dinâmicos)
+        Card(
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF2C2C2C)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Person, null, tint = TextWhite, modifier = Modifier.size(32.dp))
+                Spacer(Modifier.width(16.dp))
+                Column {
+                    Text(passengerName, color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    Text("${uiState.rating} ★", color = TextGray)
+                }
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        // Trip Details (Endereços Dinâmicos)
+        Card(
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF2C2C2C)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(Modifier.padding(16.dp)) {
+                // Pickup
+                Row {
+                    Icon(Icons.Default.Navigation, null, tint = TextWhite, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text("Pegar", color = TextGray, fontSize = 12.sp)
+                        Text(pickupAddress, color = TextWhite, fontWeight = FontWeight.Bold)
+
+                        // NOTA DO PASSAGEIRO: Mostra apenas ao buscar e se houver nota
+                        if (step is HomeStep.NavigatingToPickup && !passengerNote.isNullOrEmpty()) {
+                            Text(
+                                "Nota: $passengerNote",
+                                color = Color.Yellow,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Normal
+                            )
+                        }
+                    }
+                }
+
+                // Dropoff
+                if (showDropoff) {
+                    Spacer(Modifier.height(16.dp))
+                    Row {
+                        Icon(Icons.Default.LocationOn, null, tint = TextWhite, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text("Destino", color = TextGray, fontSize = 12.sp)
+                            Text(destinationAddress, color = TextWhite, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(20.dp))
+
+        // Fare (Apenas se showFare for true)
+        if (showFare) {
+            Card(colors = CardDefaults.cardColors(containerColor = TextWhite)) {
+                Row(Modifier.padding(16.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Ganho da corrida", color = Color.Black)
+                    Text(fare, color = Color.Black, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+        // Garante espaço mesmo sem o card do Fare
+        Spacer(Modifier.height(12.dp))
+
+
+        // BOTÃO DE AÇÃO DINÂMICA
+        Button(
+            onClick = { viewModel.processIntent(actionIntent) },
+            // Cor do botão: UberGreen se estiver em progresso, senão branco padrão
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (step is HomeStep.InProgress) UberGreen else TextWhite,
+                contentColor = if (step is HomeStep.InProgress) TextWhite else Color.Black
+            ),
+            modifier = Modifier.fillMaxWidth().height(50.dp)
+        ) {
+            Text(actionButtonLabel, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+// -------------------------------------------------------------------------
+// HELPERS
+// -------------------------------------------------------------------------
+
+
+@Composable
+fun SimulatedMap(riderPosition: Coordinate?, routePolyline: List<Coordinate>? = null) {
     PermissionsRequester(
-        permissions = listOf(
-            PermissionRequest(Permission.LOCATION, "Location", "User location", Icons.Default.LocationOn)
-        ),
+        permissions = listOf(PermissionRequest(Permission.LOCATION, "Location", "User location", Icons.Default.LocationOn)),
         onAllPermissionsGranted = {}
     ) { controller ->
         val locationTracker = remember(controller) { getLocationTracker(controller) }
@@ -556,12 +628,8 @@ fun SimulatedMap(driverPosition: LatLng?, route: List<LatLng>) {
         DisposableEffect(Unit) { onDispose { tracker.stopTracking() } }
 
         val coordinate by tracker.coordinate.collectAsState()
-        val mappedDriver = driverPosition?.let { Coordinate(it.latitude, it.longitude) }
+        val mappedRider = riderPosition?.let { Coordinate(it.latitude, it.longitude) }
 
-        MapViewComponent(
-            modifier = Modifier.fillMaxSize(),
-            coordinate = coordinate,
-            driverCoordinate = mappedDriver
-        )
+        MapViewComponent(modifier = Modifier.fillMaxSize(), coordinate = coordinate, routePolyline = routePolyline, riderPosition = mappedRider)
     }
 }

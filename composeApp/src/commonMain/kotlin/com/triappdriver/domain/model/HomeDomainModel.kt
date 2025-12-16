@@ -17,11 +17,21 @@ data class HomeDomainModel(
     val onlineHours: String = "6.2h",
     val rating: String = "4.9",
     // Mapa
-    val routePolyline: List<LatLng> = emptyList(),
-    val driverPosition: LatLng? = null,
+    val routePolyline: List<Coordinate> = emptyList(),
+    val driverPosition: Coordinate? = null,
     val destination: String? = null,
     val routeProgress: Float = 0f,
-    val timeRemaining: Int = 0
+    val timeRemaining: Int = 0,
+    val currentRiderName: String? = null,
+    val currentDestinationAddress: String? = null,
+    val currentPickupAddress: String? = null,
+    val currentPassengerNote: String? = null, // NOVO: para a nota
+    val currentFare: String = "R$ 0,00",     // NOVO: para o valor da corrida
+    val pickupCoordinate: Coordinate? = null, // NOVO: Coordenadas de pickup
+    val destinationCoordinate: Coordinate? = null, // NOVO: Coordenadas de destino
+    // Lógica de tempo e distância (Calculados pelo ViewModel/UseCase)
+    val etaMinutes: Int = 0, // Minutos restantes
+    val distanceMeters: Int = 0, // Distância restante em metros
 ) : ViewState<HomeDomainModel>
 
 // ... (HomeStep e suas subclasses permanecem iguais)
@@ -36,7 +46,8 @@ sealed class HomeStep {
         val destinationAddress: String,
         val distanceToPickup: String,
         val estimatedFare: String,
-        val eta: String
+        val eta: String,
+        val passengerNote: String?
     ) : HomeStep()
 
     data class NavigatingToPickup(

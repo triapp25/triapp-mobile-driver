@@ -1,6 +1,10 @@
 package com.triappdriver.presentation.feature.home
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewModelScope
+import com.triappdriver.data.dtos.RiderFirebaseDTO
 import com.triappdriver.data.repository.MapboxSearchRepository
 import com.triappdriver.domain.model.*
 import com.triappdriver.domain.model.HomeStep.*
@@ -9,9 +13,13 @@ import com.triappdriver.domain.usecase.TaxiUseCase
 import com.triappdriver.local.AppPreferences
 import com.triappdriver.presentation.BaseViewModel
 import com.triappdriver.utils.LocationRepository
+import dev.icerock.moko.geo.LatLng
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 class HomeViewModel(
     private val getRatingUseCase: GetRatingLastUseCase,
@@ -24,9 +32,31 @@ class HomeViewModel(
 
     // Job para controlar o listener do Firestore
     private var firestoreListenerJob: Job? = null
+    private var currentTripId: String? = null
+
+    // Job para controlar o rastreamento de métricas em tempo real (ETA/Distância)
+    private var rideMetricsJob: Job? = null
 
     init {
+        loadInitialData()
         restoreSession()
+    }
+
+    private fun loadInitialData() {
+        viewModelScope.launch {
+            val permission = locationRepository.requestLocationPermission()
+
+            if (permission) {
+                val loc = locationRepository.getCurrentLocation()
+                if (loc != null) {
+                    updateState { s ->
+                        s.copy(
+                            driverPosition = Coordinate(loc.first, loc.second)
+                        )
+                    }
+                }
+            }
+        }
     }
 
     override fun processIntent(intent: HomeIntent) {
@@ -66,6 +96,7 @@ class HomeViewModel(
 
     private fun goOffline() {
         stopFirestoreListener()
+        stopRideMetricsTracking() // NOVO: Para o rastreamento
         updateState { it.copy(step = Offline, isOnline = false) }
     }
 
@@ -79,6 +110,9 @@ class HomeViewModel(
 
         // 2. Começa a ouvir o documento da corrida para reagir a mudanças e pegar dados do passageiro
         startFirestoreListener()
+
+        // 3. NOVO: Inicia o rastreamento de métricas em tempo real (ETA/Distância)
+        startRideMetricsTracking()
     }
 
     private fun rejectRide() {
@@ -88,13 +122,17 @@ class HomeViewModel(
 
     /**
      * Atualiza o status no Firestore.
-     * O 'TaxiUseCase' deve ter um método updateTripStatus.
      */
     private fun updateRideStatus(newStatus: String) {
         viewModelScope.launch {
             try {
-                // Supondo que você adicionou este método no UseCase conforme refatoração anterior
-                taxiUseCase.updateTripStatus(currentTripId, newStatus)
+                // Se o status for IN_PROGRESS, garantimos que o alvo do rastreamento seja o DESTINO
+                if (newStatus == "IN_PROGRESS") {
+                    // O rastreamento contínuo será reavaliado no próximo tick do locationRepository
+                    // e irá calcular a rota até o destinationCoordinate
+                }
+
+                taxiUseCase.updateTripStatus(currentTripId.orEmpty(), newStatus)
             } catch (e: Exception) {
                 // Tratar erro de rede (ex: exibir Snackbar)
                 e.printStackTrace()
@@ -110,7 +148,7 @@ class HomeViewModel(
         if (firestoreListenerJob?.isActive == true) return
 
         firestoreListenerJob = viewModelScope.launch {
-            taxiUseCase.startTaxiFlow(currentTripId)
+            taxiUseCase.startTaxiFlow(currentTripId.orEmpty())
                 .collect { taxiState ->
                     handleTaxiState(taxiState)
                 }
@@ -122,63 +160,152 @@ class HomeViewModel(
         firestoreListenerJob = null
     }
 
+    // -----------------------------------------------------
+    // MÉTRICAS DE ROTA E RASTREAMENTO (LÓGICA DO MOTORISTA)
+    // -----------------------------------------------------
+
+    /**
+     * Inicia o rastreamento em tempo real da localização do motorista
+     * e calcula a distância/ETA até o ponto de interesse (Pickup ou Dropoff).
+     */
+    private fun startRideMetricsTracking() {
+        rideMetricsJob?.cancel() // Cancela o job anterior
+
+        rideMetricsJob = viewModelScope.launch {
+            // Ouve a localização do motorista em tempo real
+
+            // Determina a coordenada alvo com base no HomeStep atual
+            val targetLatLng: Coordinate? = when (state.value.step) {
+                is HomeStep.NavigatingToPickup -> state.value.pickupCoordinate
+                is HomeStep.InProgress -> state.value.destinationCoordinate
+                else -> null
+            }
+
+            if (targetLatLng != null) {
+                try {
+                    val origin = state.value.driverPosition
+                    val destination = targetLatLng
+
+                    // Calcula a rota (polyline, duração, distância)
+                    // NOTA: mapboxRepository.getRoutePolyline deve ser capaz de receber LatLng
+                    val routeResult = mapboxRepository.getRoutePolyline(origin!!, destination)
+
+                    val distanceMeters = routeResult?.distance?.toInt() ?: 0
+                    // Duration está em segundos, converter para minutos
+                    val etaMinutes = (routeResult?.duration?.div(60.0))?.toInt() ?: 0
+
+                    // Atualiza o estado da UI com as métricas e a polyline
+                    updateState { s ->
+                        s.copy(
+                            etaMinutes = etaMinutes.coerceAtLeast(1),
+                            distanceMeters = distanceMeters.coerceAtLeast(0),
+                        )
+                    }
+
+                    // Lógica de Chegada (Simulação de clique no botão "Chegou")
+                    // Se estiver indo buscar o passageiro e estiver muito perto
+                    if (state.value.step is HomeStep.NavigatingToPickup && distanceMeters < 50) {
+                        processIntent(HomeIntent.ArrivedAtPickup)
+                    }
+
+                } catch (e: Exception) {
+                    println("Erro ao calcular rota: ${e.message}")
+                }
+            } else {
+                // Se não houver alvo válido (ex: Corrida cancelada), para o rastreamento
+                stopRideMetricsTracking()
+            }
+        }
+    }
+
+    private fun stopRideMetricsTracking() {
+        rideMetricsJob?.cancel()
+        rideMetricsJob = null
+        // Limpar métricas no estado
+        updateState { it.copy(etaMinutes = 0, distanceMeters = 0, routePolyline = emptyList()) }
+    }
+
+
     /**
      * Mapeia o estado vindo do Firestore (TaxiState) para o estado da UI (HomeStep)
      */
     private fun handleTaxiState(taxiState: TaxiState) {
         when (taxiState) {
             is TaxiState.Online -> {
+                currentTripId = taxiState.rider.tripId
+                val rider: RiderFirebaseDTO = taxiState.rider
+
+                val passengerName = rider.rider.name.orEmpty()
+                val pickupAddress = rider.pickup.name.orEmpty()
+                val destinationAddress = rider.rider.location.name.orEmpty()
+
+                val pickupCoord = Coordinate(rider.pickup.lat, rider.pickup.lng)
+                val destinationCoord = Coordinate(rider.rider.location.lat, rider.rider.location.lng)
+
+                // 1. SALVAR DADOS NO ESTADO DO VIEWMODEL (Incluindo Coordenadas)
                 updateState {
                     it.copy(
+                        currentRiderName = passengerName,
+                        currentPickupAddress = pickupAddress,
+                        currentDestinationAddress = destinationAddress,
+                        currentPassengerNote = rider.rider.note,
+                        currentFare = "R$ 0,00", // Definir valor real se estiver no DTO
+                        pickupCoordinate = pickupCoord, // SALVANDO COORDENADAS
+                        destinationCoordinate = destinationCoord, // SALVANDO COORDENADAS
                         step = RideOffer(
-                            passengerName = taxiState.rider.name.orEmpty(), // Viria do backend na oferta
-                            pickupAddress = taxiState.rider.pickup.name.orEmpty(),
-                            destinationAddress = taxiState.rider.rider.location.name.orEmpty(),
+                            passengerName = passengerName,
+                            pickupAddress = pickupAddress,
+                            destinationAddress = destinationAddress,
                             distanceToPickup = "calculando...",
                             estimatedFare = "R$ --,--",
-                            eta = "-- min"
+                            eta = "-- min",
+                            passengerNote = rider.rider.note
                         )
                     )
                 }
             }
 
             is TaxiState.Update -> {
-                val driverData = taxiState.driverDTO // Dados vindos do DTO
-                val status =
-                    taxiState.status     // Status vindo do Firestore (ACCEPTED, ARRIVED, etc)
+                val status = taxiState.status
+
+                // Obtém os dados salvos no estado (necessário para persistência da UI)
+                val savedRiderName = state.value.currentRiderName.orEmpty()
+                val savedPickupAddress = state.value.currentPickupAddress.orEmpty()
+                val savedDestinationAddress = state.value.currentDestinationAddress.orEmpty()
 
                 // Define o próximo passo da UI baseado no status do banco
                 val nextStep = when (status) {
                     "ACCEPTED" -> {
+                        // O rastreamento de métricas já foi iniciado em acceptRide()
                         NavigatingToPickup(
-                            passengerName = "Passageiro (Via Banco)",
-                            pickupAddress = "Verificar coordenadas no DTO"
+                            passengerName = savedRiderName,
+                            pickupAddress = savedPickupAddress
                         )
                     }
 
                     "ARRIVED" -> {
-                        // Mantém na tela de pickup, mas muda o texto ou estado interno se necessário
-                        // Ou se tiver um step específico: HomeStep.WaitingForPassenger
-                        NavigatingToPickup(
-                            passengerName = "Passageiro",
-                            pickupAddress = "Aguardando embarque..."
+                        // Chegou ao pickup, agora o rastreamento deve mudar de alvo (se não o fez automaticamente)
+                        NavigatingToPickup( // Mantém na tela de pickup, mas com status visual de ARRIVED
+                            passengerName = savedRiderName,
+                            pickupAddress = "Aguardando embarque em $savedPickupAddress"
                         )
                     }
 
                     "IN_PROGRESS" -> {
+                        // Viagem iniciada. O rastreamento de métricas agora foca no DESTINO.
+                        // O `startRideMetricsTracking` já faz isso automaticamente ao checar o `state.value.step`.
                         InProgress(
-                            passengerName = "Passageiro",
-                            destinationAddress = "Destino Final",
-                            timeRemainingMinutes = 0 // Calcular real com MapBox
+                            passengerName = savedRiderName,
+                            destinationAddress = savedDestinationAddress,
+                            timeRemainingMinutes = state.value.etaMinutes
                         )
                     }
 
                     "COMPLETED" -> {
-                        // Será tratado no bloco TaxiState.Completed abaixo ou aqui
-                        RideCompleted("Passageiro")
+                        RideCompleted(savedRiderName)
                     }
 
-                    else -> state.value.step // Mantém estado atual se status desconhecido
+                    else -> state.value.step
                 }
 
                 updateState { it.copy(step = nextStep) }
@@ -186,18 +313,28 @@ class HomeViewModel(
 
             is TaxiState.Completed -> {
                 stopFirestoreListener()
-                updateState { it.copy(step = RideCompleted("Passageiro")) }
-                // Navegar para rating ou resetar
+                stopRideMetricsTracking() // NOVO: Para o rastreamento
+
+                val savedRiderName = state.value.currentRiderName.orEmpty()
+
+                updateState {
+                    it.copy(
+                        step = RideCompleted(savedRiderName),
+                        // Limpar dados da viagem
+                        currentRiderName = null,
+                        currentDestinationAddress = null,
+                        currentPickupAddress = null
+                    )
+                }
                 sendEffect(HomeEffect.NavigateToConfirmation)
             }
 
             is TaxiState.Error -> {
-                // Lidar com erro
                 println("Erro no listener: ${taxiState.message}")
             }
 
-            TaxiState.Idle -> TODO()
-            is TaxiState.Started -> TODO()
+            TaxiState.Idle -> {}
+            is TaxiState.Started -> {}
         }
     }
 
@@ -206,10 +343,12 @@ class HomeViewModel(
     // -----------------------------------------------------
     private fun restoreSession() {
         viewModelScope.launch {
-            val isDriverActive = appPreferences.isDriverActive().collect {
-                if (it) {
+            appPreferences.isDriverActive().collect { isOnline ->
+                if (isOnline) {
+                    // Simplesmente volta para o modo online, o listener de rides cuida do resto
                     updateState { it.copy(isOnline = true) }
-                    startFirestoreListener()
+                    // Se houver tripId ativo salvo, iniciar listeners
+                    // startFirestoreListener()
                 }
             }
         }

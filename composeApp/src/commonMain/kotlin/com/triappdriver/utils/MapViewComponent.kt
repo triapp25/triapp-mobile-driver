@@ -8,5 +8,6 @@ import com.triappdriver.domain.model.Coordinate
 expect fun MapViewComponent(
     modifier: Modifier = Modifier,
     coordinate: Coordinate,
-    driverCoordinate: Coordinate? = null
+    routePolyline: List<Coordinate>? = null,
+    riderPosition: Coordinate? = null,
 )

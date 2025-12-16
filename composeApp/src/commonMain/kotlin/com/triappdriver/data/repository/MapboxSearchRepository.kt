@@ -1,26 +1,40 @@
 package com.triappdriver.data.repository
 
+import com.triappdriver.data.MapboxApiService
+import com.triappdriver.data.dtos.Route
+import com.triappdriver.domain.model.Coordinate
+import dev.icerock.moko.geo.LatLng
 import kotlinx.coroutines.delay
 
 interface MapboxSearchRepository {
     //suspend fun searchPlaces(query: String): List<SearchResult>
+    suspend fun getRoutePolyline(origin: Coordinate, destination: Coordinate): Route?
 
 }
 
-class MapboxSearchRepositoryImpl : MapboxSearchRepository {
-    //override suspend fun searchPlaces(query: String): List<SearchResult> {
-    //    delay(500) // Simula delay de rede
-//
-    //    if (query.length < 3) return emptyList()
-//
-    //    // Retorno fake. Na implementação real, chame sua API do Mapbox aqui:
-    //    // https://api.mapbox.com/geocoding/v5/mapbox.places/{query}.json?access_token=YOUR_TOKEN
-    //    return listOf(
-    //        SearchResult("1", "Av. Paulista, 1578", "Bela Vista, São Paulo", -23.561, -46.656),
-    //        SearchResult("2", "Shopping Iguatemi", "Jardim Paulistano", -23.577, -46.688),
-    //        SearchResult("3", "Aeroporto de Congonhas", "Vila Congonhas", -23.626, -46.656),
-    //        SearchResult("4", "Parque Ibirapuera", "Vila Mariana", -23.587, -46.657),
-    //        SearchResult("5", "$query (Resultado Mapa)", "Endereço detalhado...", 0.0, 0.0)
-    //    )
-    //}
+
+class MapboxSearchRepositoryImpl(
+    private val api: MapboxApiService,
+    private val apiKey: String
+) :MapboxSearchRepository {
+
+    override suspend fun getRoutePolyline(origin: Coordinate, destination: Coordinate): Route? {
+        val coordinates = "${origin.longitude},${origin.latitude};${destination.longitude},${destination.latitude}"
+
+        try {
+            val response = api.getDirections(
+                coordinates = coordinates,
+                accessToken = apiKey
+            )
+
+            return response.routes.firstOrNull()
+            //?: return emptyList()
+
+            // return PolylineDecoder.decode(polylineEncoded.geometry, 6)
+
+        } catch (e: Exception) {
+            println("Erro ao buscar rota do Mapbox: ${e.message}")
+            return null
+        }
+    }
 }

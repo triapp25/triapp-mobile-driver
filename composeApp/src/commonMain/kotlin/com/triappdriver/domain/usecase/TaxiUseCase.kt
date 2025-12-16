@@ -32,20 +32,19 @@ class TaxiUseCase() {
     suspend fun updateTripStatus(tripId: String, newStatus: String) {
         try {
             // Atualiza apenas o campo status
-            db.collection("trip_status").document(tripId)
-                .update(mapOf("status" to newStatus))
+
         } catch (e: Exception) {
             // Tratar erro de conexão se necessário
             e.printStackTrace()
         }
     }
 
-    suspend fun enabledOnline(): Flow<TaxiState> = flow {
+    fun enabledOnline(): Flow<TaxiState> = flow {
         listenOnline()
             .catch { e -> emit(TaxiState.Error(e.message ?: "Erro desconhecido")) }
             .collect { result ->
                 // Emite o estado atualizado com os dados vindos do banco
-                emit(TaxiState.Online(result))
+                result?.let { emit(TaxiState.Online(it)) }
 
             }
     }
