@@ -115,12 +115,6 @@ kotlin {
             implementation(libs.filekit.core)
             implementation(libs.filekit.compose)
 
-            implementation(libs.firebase.common)
-            implementation(libs.firebase.auth)
-            implementation(libs.firebase.crashlytics)
-            implementation(libs.firebase.messaging)
-            implementation(libs.firebase.firestore)
-
             implementation(libs.room.runtime)
             implementation(libs.sqlite.bundled)
 
@@ -179,6 +173,15 @@ android {
 // --- CORREÇÃO 3: DEPENDÊNCIAS DO KSP ---
 // Isso garante que o código do Ktorfit seja gerado para todas as plataformas
 dependencies {
+
+    implementation(platform(libs.firebase.bom))
+
+    // Firebase Android SDKs
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.firestore)
+    implementation(libs.firebase.messaging)
+    implementation(libs.firebase.crashlyticsKtx)
+
     debugImplementation(compose.uiTooling)
 
     // --- KTORFIT KSP ---

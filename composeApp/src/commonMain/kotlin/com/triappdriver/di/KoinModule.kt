@@ -1,10 +1,8 @@
 package com.triappdriver.di
 
-import androidx.room.RoomDatabase
-import androidx.sqlite.SQLiteDriver
-import com.russhwolf.settings.ObservableSettings
 import com.russhwolf.settings.Settings
 import com.triappdriver.data.ApiService
+import com.triappdriver.data.LocationSender
 import com.triappdriver.data.MapboxApiService
 import com.triappdriver.data.NetworkProvider
 import com.triappdriver.data.repository.DataRepository
@@ -29,7 +27,6 @@ import com.triappdriver.domain.usecase.TaxiUseCase
 import com.triappdriver.local.AppDatabase
 import com.triappdriver.local.AppPreferences
 import com.triappdriver.local.getRoomDatabase
-import com.triappdriver.local.provideObservableSettings
 import com.triappdriver.presentation.feature.home.HomeViewModel
 import com.triappdriver.presentation.feature.login.LoginViewModel
 import com.triappdriver.presentation.feature.profile.ProfileViewModel
@@ -37,11 +34,11 @@ import com.triappdriver.presentation.feature.rating.RatingViewModel
 import com.triappdriver.presentation.feature.signup.SignupViewModel
 import com.triappdriver.utils.FirebaseAuthManager
 import com.triappdriver.utils.FirebaseServiceImpl
+import com.triappdriver.utils.GeoLocationTracker
 import com.triappdriver.utils.LocationProvider
 import com.triappdriver.utils.LocationRepository
+import com.triappdriver.utils.getLocationTracker
 import de.jensklingenberg.ktorfit.Ktorfit
-import dev.gitlive.firebase.Firebase
-import dev.gitlive.firebase.auth.auth
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngineFactory
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -124,14 +121,11 @@ val networkModule = module {
 }
 
 val authModule = module {
-    // Fornece a instância do SDK do Firebase Auth (GitLive)
-    single { Firebase.auth }
     singleOf(::FirebaseServiceImpl).bind<FirebaseAuthManager>()
-
 }
 
 val repositoryModule = module {
-    single<DataRepository> { DataRepositoryImpl(get()) }
+    single<DataRepository> { DataRepositoryImpl(get(), get()) }
     single { LocationRepository(get()) }
     single<RideRepository> { RideRepositoryImpl(get()) }
     single<RatingRepository> { RatingRepositoryImpl(get(), get()) }
@@ -142,11 +136,31 @@ val repositoryModule = module {
     //single<MapController> { DefaultMapController() }
     single<LocationProvider> { LocationProvider() }
 
+    factory {
+        getLocationTracker(
+            permissionController = get()
+        )
+    }
+
+    single {
+        GeoLocationTracker(
+            get(),
+        )
+    }
+
+    single {
+        LocationSender(
+            api = get(),
+            geoLocationTracker = get(),
+            firebaseAuthManager = get()
+        )
+    }
+
 }
 
 val domainModule = module {
     single { GetDataUseCase(get()) }
-    single { TaxiUseCase() }
+    single { TaxiUseCase(get(), get(), get()) }
     single { SaveSignUpDraftUseCase(get()) }
     single { GetSignUpDraftUseCase(get(), get()) }
     single { SendRatingUseCase(get()) }

@@ -69,8 +69,8 @@ class HomeViewModel(
             HomeIntent.AcceptRide -> acceptRide()
             HomeIntent.RejectRide -> rejectRide()
 
-            HomeIntent.ArrivedAtPickup -> updateRideStatus("ARRIVED")
-            HomeIntent.StartRide -> updateRideStatus("IN_PROGRESS")
+            HomeIntent.ArrivedAtPickup -> updateRideStatus("ONGOING")
+            HomeIntent.StartRide -> updateRideStatus("ONGOING")
             HomeIntent.EndRide -> updateRideStatus("COMPLETED")
 
             // --- Outros ---
@@ -126,12 +126,6 @@ class HomeViewModel(
     private fun updateRideStatus(newStatus: String) {
         viewModelScope.launch {
             try {
-                // Se o status for IN_PROGRESS, garantimos que o alvo do rastreamento seja o DESTINO
-                if (newStatus == "IN_PROGRESS") {
-                    // O rastreamento contínuo será reavaliado no próximo tick do locationRepository
-                    // e irá calcular a rota até o destinationCoordinate
-                }
-
                 taxiUseCase.updateTripStatus(currentTripId.orEmpty(), newStatus)
             } catch (e: Exception) {
                 // Tratar erro de rede (ex: exibir Snackbar)

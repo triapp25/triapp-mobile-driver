@@ -3,8 +3,10 @@ package com.triappdriver.data
 
 import com.triappdriver.data.dtos.CardBody
 import com.triappdriver.data.dtos.CardDto
+import com.triappdriver.data.dtos.LocationRequest
 import com.triappdriver.data.dtos.ProductDto
 import com.triappdriver.data.dtos.RatingBody
+import com.triappdriver.data.dtos.RideStatusRequestDTO
 import com.triappdriver.data.dtos.RideCancelRequestDTO
 import com.triappdriver.data.dtos.RideChooseRequestDTO
 import com.triappdriver.data.dtos.RideDTO
@@ -14,7 +16,6 @@ import de.jensklingenberg.ktorfit.http.GET
 import de.jensklingenberg.ktorfit.http.POST
 import de.jensklingenberg.ktorfit.http.PUT
 import de.jensklingenberg.ktorfit.http.Path
-import de.jensklingenberg.ktorfit.http.QueryName
 
 interface ApiService {
 
@@ -49,6 +50,23 @@ interface ApiService {
         @Body body: RideRequestDTO
     ): RideDTO
 
+    @POST("/trips/{tripId}/status/accepted")
+    suspend fun rideAccepted(
+        @Path("tripId") tripId: String,
+        @Body body: RideStatusRequestDTO
+    )
+
+    @POST("/trips/{tripId}/status/rejected")
+    suspend fun rideRejected(
+        @Path("tripId") tripId: String,
+        @Body body: RideStatusRequestDTO
+    )
+
+    @POST("/trips/{tripId}/status/on-going")
+    suspend fun rideOnGoing(
+        @Path("tripId") tripId: String,
+    )
+
     @POST("/trips/{tripId}/cancel")
     suspend fun rideCancel(
         @Path("tripId") tripId: String,
@@ -59,5 +77,10 @@ interface ApiService {
     suspend fun rideChooseCategory(
         @Path("tripId") tripId: String,
         @Body body: RideChooseRequestDTO
+    )
+
+    @POST("/api/v1/locations")
+    suspend fun sendLocation(
+        @Body body: LocationRequest
     )
 }

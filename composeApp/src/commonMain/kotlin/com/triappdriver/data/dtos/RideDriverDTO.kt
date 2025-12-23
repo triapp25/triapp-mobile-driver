@@ -10,12 +10,22 @@ data class RideDriverDTO(
     val plate: String? = null,
     val rating: String? = null,
     val photoUrl: String? = null
-)
+){
+    companion object {
+        fun fromMap(map: Map<String, Any>): RideDriverDTO =
+            RideDriverDTO(
+                id = map["id"] as? String ?: "",
+                name = map["name"] as? String ?: "",
+                carModel = map["carModel"] as? String ?: "",
+                rating = map["rating"] as? String ?: "",
+                photoUrl = map["photoUrl"] as? String ?: "",
+                plate = map["plate"] as? String ?: "",
+            )
+    }
+}
 
 @Serializable
 data class RiderFirebaseDTO(
-    val acceptedAt: String? = null, // Usando String se a conversão de data/hora for complexa no KMP/Firestore
-    val createdAt: String? = null,
     val status: String,
     val tripId: String,
     val pickup: LocationFirebaseDTO, // Supondo uma classe LocationDTO

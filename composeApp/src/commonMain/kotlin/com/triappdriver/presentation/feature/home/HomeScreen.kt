@@ -34,6 +34,7 @@ import dev.icerock.moko.geo.compose.BindLocationTrackerEffect
 import dev.icerock.moko.permissions.Permission
 import dev.icerock.moko.permissions.location.LOCATION
 import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import kotlin.math.roundToInt
 
@@ -617,19 +618,24 @@ fun ActiveRideBottomPanel(step: HomeStep, viewModel: HomeViewModel) {
 
 @Composable
 fun SimulatedMap(riderPosition: Coordinate?, routePolyline: List<Coordinate>? = null) {
-    PermissionsRequester(
-        permissions = listOf(PermissionRequest(Permission.LOCATION, "Location", "User location", Icons.Default.LocationOn)),
-        onAllPermissionsGranted = {}
-    ) { controller ->
-        val locationTracker = remember(controller) { getLocationTracker(controller) }
-        BindLocationTrackerEffect(locationTracker = locationTracker)
-        val tracker = remember(locationTracker) { GeoLocationTracker(locationTracker) }
-        LaunchedEffect(Unit) { tracker.startTracking() }
-        DisposableEffect(Unit) { onDispose { tracker.stopTracking() } }
+    // Injeta a mesma instância que o Service está usando
+    val tracker: GeoLocationTracker = koinInject<GeoLocationTracker>()
 
-        val coordinate by tracker.coordinate.collectAsState()
-        val mappedRider = riderPosition?.let { Coordinate(it.latitude, it.longitude) }
+    val currentCoordinate by tracker.coordinate.collectAsState()
 
-        MapViewComponent(modifier = Modifier.fillMaxSize(), coordinate = coordinate, routePolyline = routePolyline, riderPosition = mappedRider)
+    val mappedRider = riderPosition?.let { Coordinate(it.latitude, it.longitude) }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        currentCoordinate?.let { coord ->
+            MapViewComponent(
+                modifier = Modifier.fillMaxSize(),
+                coordinate = coord,
+                routePolyline = routePolyline,
+                riderPosition = mappedRider
+            )
+        } ?: run {
+            // Feedback visual enquanto a primeira posição não chega
+            Text("Aguardando sinal de GPS...", Modifier.align(Alignment.Center))
+        }
     }
 }

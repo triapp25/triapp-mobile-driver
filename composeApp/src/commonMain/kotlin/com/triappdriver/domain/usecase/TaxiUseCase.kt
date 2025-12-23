@@ -1,25 +1,31 @@
 package com.triappdriver.domain.usecase
 
+import com.triappdriver.data.firestore.FirestoreRepository
 import com.triappdriver.data.firestore.listenDocumentUntilDone
 import com.triappdriver.data.firestore.listenOnline
 import com.triappdriver.data.repository.DataRepository
+import com.triappdriver.domain.model.ProductDomainModel
 import com.triappdriver.domain.model.TaxiState
-import dev.gitlive.firebase.Firebase
-import dev.gitlive.firebase.firestore.firestore
+import com.triappdriver.utils.FirebaseAuthManager
+import com.triappdriver.utils.getCrashlyticsService
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 
-class TaxiUseCase() {
-
-    private val db = Firebase.firestore
+class TaxiUseCase(
+    private val firestoreRepository: FirestoreRepository,
+    private val firebaseAuthManager: FirebaseAuthManager,
+    private val dataRepository: DataRepository
+) {
 
     // 1. Ouve as mudanças de status vindas do Backend/Firestore
     fun startTaxiFlow(tripId: String): Flow<TaxiState> = flow {
-        listenDocumentUntilDone(tripId)
+        listenDocumentUntilDone(
+            firestoreRepository,
+            tripId
+        )
             .catch { e -> emit(TaxiState.Error(e.message ?: "Erro desconhecido")) }
             .collect { result ->
-                // Emite o estado atualizado com os dados vindos do banco
                 emit(TaxiState.Update(result.driver, result.status))
 
                 if (result.status == "COMPLETED") {
@@ -31,16 +37,24 @@ class TaxiUseCase() {
     // 2. Funções para o Motorista alterar o status no Firestore
     suspend fun updateTripStatus(tripId: String, newStatus: String) {
         try {
-            // Atualiza apenas o campo status
-
+            if (newStatus == "COMPLETED") {
+                // dataRepository.rideCompleted(tripId)
+            } else if (newStatus == "ACCEPTED") {
+                dataRepository.rideAccepted(tripId)
+            } else if (newStatus == "REJECTED") {
+                dataRepository.rideRejected(tripId)
+            } else if (newStatus == "ONGOING") {
+                dataRepository.rideOnGoing(tripId)
+            }
+            Result.success(Unit)
         } catch (e: Exception) {
-            // Tratar erro de conexão se necessário
-            e.printStackTrace()
+            getCrashlyticsService().recordException(e)
+            Result.failure(e)
         }
     }
 
     fun enabledOnline(): Flow<TaxiState> = flow {
-        listenOnline()
+        listenOnline(firestoreRepository, firebaseAuthManager)
             .catch { e -> emit(TaxiState.Error(e.message ?: "Erro desconhecido")) }
             .collect { result ->
                 // Emite o estado atualizado com os dados vindos do banco
