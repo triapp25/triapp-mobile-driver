@@ -76,13 +76,17 @@ fun mapDocumentToRideRequest(data: Map<String, Any?>): RiderFirebaseDTO? {
     val status = data["status"] as? String ?: return null
     val tripId = data["tripId"] as? String ?: return null
     val riderName = data["riderName"] as? String ?: return null
+    val etaMin = data["etaMinutes"] as? String ?: "10:00" // Valor padrão se não existir
+    val distance = data["distanceEstimated"] as? String ?: "6km"
+    val fare = data["finalPrice"] as? String ?: "23.50"
     val rating = data["riderRating"] as? Double ?: return null
 
     // Mapear 'pickup'
     val pickupMap = data["pickup"] as? Map<String, Any?> ?: emptyMap<String, Any?>()
     val pickupLat = pickupMap["lat"] as? Double ?: return null
     val pickupLng = pickupMap["lng"] as? Double ?: return null
-    val pickupLocation = LocationFirebaseDTO(lat = pickupLat, lng = pickupLng)
+    val pickupName = pickupMap["address"] as? String ?: return null
+    val pickupLocation = LocationFirebaseDTO(lat = pickupLat, lng = pickupLng, name = pickupName)
 
     // Mapear 'rider'
     val riderMap = data["rider"] as? Map<String, Any?> ?: emptyMap<String, Any?>()
@@ -90,10 +94,10 @@ fun mapDocumentToRideRequest(data: Map<String, Any?>): RiderFirebaseDTO? {
     val riderNote = riderMap["note"] as? String ?: ""
 
     // Mapear 'rider.location'
-    val riderLocationMap = riderMap["location"] as? Map<String, Any?> ?: emptyMap<String, Any?>()
+    val riderLocationMap = data["dropoff"] as? Map<String, Any?> ?: emptyMap<String, Any?>()
     val riderLocationLat = riderLocationMap["lat"] as? Double ?: 0.0
     val riderLocationLng = riderLocationMap["lng"] as? Double ?: 0.0
-    val riderLocationName = riderLocationMap["name"] as? String ?: ""
+    val riderLocationName = riderLocationMap["address"] as? String ?: ""
 
     val riderLocation = LocationFirebaseDTO(
         lat = riderLocationLat,
@@ -112,6 +116,12 @@ fun mapDocumentToRideRequest(data: Map<String, Any?>): RiderFirebaseDTO? {
     return RiderFirebaseDTO(
         status = status,
         tripId = tripId,
+        etaMin = etaMin,
+        distance = distance,
+        fare = fare,
+        name = riderName,
+        rating = rating,
+        riderId = riderId,
         pickup = pickupLocation,
         rider = riderInfo
     )

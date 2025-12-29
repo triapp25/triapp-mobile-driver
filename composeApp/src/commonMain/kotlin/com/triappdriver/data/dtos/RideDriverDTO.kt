@@ -33,6 +33,9 @@ data class RiderFirebaseDTO(
     val name: String? = null,
     val rating: Double? = null,
     val riderId: String? = null,
+    val etaMin: String? = null,
+    val distance: String? = null,
+    val fare: String? = null,
 )
 
 @Serializable

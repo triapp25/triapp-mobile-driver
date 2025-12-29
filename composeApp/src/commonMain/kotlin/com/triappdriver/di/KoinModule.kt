@@ -150,7 +150,7 @@ val authModule = module {
 }
 
 val repositoryModule = module {
-    single<DataRepository> { DataRepositoryImpl(get(), get(), get()) }
+    single<DataRepository> { DataRepositoryImpl(get(), get()) }
     single { LocationRepository(get()) }
     single<RideRepository> { RideRepositoryImpl(get()) }
     single<RatingRepository> { RatingRepositoryImpl(get(), get()) }

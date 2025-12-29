@@ -6,7 +6,11 @@ import android.content.Context
 import android.content.pm.PackageManager
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
@@ -45,29 +49,43 @@ actual class LocationProvider {
         launcher.launch(permission)
     }
 
-    actual suspend fun getCurrentLocation(): Pair<Double, Double>? {
-        val activity = currentActivityRef?.get()
-        val fine = activity?.baseContext?.let { ContextCompat.checkSelfPermission(it, Manifest.permission.ACCESS_FINE_LOCATION) }
-        val coarse = activity?.baseContext?.let { ContextCompat.checkSelfPermission(it, Manifest.permission.ACCESS_COARSE_LOCATION) }
-
-        // Verificação de permissão agora só garante que podemos prosseguir
-        if (fine != PackageManager.PERMISSION_GRANTED && coarse != PackageManager.PERMISSION_GRANTED) {
-            // Retorna null ou lança uma exceção, o ViewModel deve chamar requestLocationPermission antes
-            return null
+    @androidx.annotation.RequiresPermission(
+        allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION]
+    )
+    actual suspend fun getCurrentLocation(): Pair<Double, Double>? = suspendCancellableCoroutine { cont ->
+        val activity = currentActivityRef?.get() ?: run {
+            cont.resume(null)
+            return@suspendCancellableCoroutine
         }
 
-        val fusedLocationClient = activity.baseContext?.let { LocationServices.getFusedLocationProviderClient(it) }
+        val client = LocationServices.getFusedLocationProviderClient(activity)
 
-        return suspendCancellableCoroutine { cont ->
-            fusedLocationClient?.lastLocation?.addOnSuccessListener { location ->
+        val request = LocationRequest.Builder(
+            Priority.PRIORITY_HIGH_ACCURACY,
+            10_000
+        )
+            .setMinUpdateDistanceMeters(5f)
+            .build()
+
+        val callback = object : LocationCallback() {
+            override fun onLocationResult(result: LocationResult) {
+                val location = result.lastLocation
+
                 if (location != null) {
                     cont.resume(Pair(location.latitude, location.longitude))
-                } else {
-                    cont.resume(null)
+                    client.removeLocationUpdates(this)
                 }
-            }?.addOnFailureListener {
-                cont.resume(null)
             }
+        }
+
+        client.requestLocationUpdates(
+            request,
+            callback,
+            activity.mainLooper
+        )
+
+        cont.invokeOnCancellation {
+            client.removeLocationUpdates(callback)
         }
     }
 }

@@ -54,9 +54,9 @@ private data class MapMarkersManager(
 @Composable
 actual fun MapViewComponent(
     modifier: Modifier,
-    coordinate: Coordinate, // Posição do Usuário
+    coordinate: Coordinate, // Posição do motorista
     routePolyline: List<Coordinate>?, // Rota completa (motorista -> coleta -> destino)
-    riderPosition: Coordinate?, // Posição atual do Motorista
+    riderPosition: Coordinate?, // Posição atual do usuário
 ) {
     AndroidView(
         factory = { context ->

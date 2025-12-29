@@ -6,6 +6,7 @@ import com.triappdriver.local.AppPreferences
 import com.triappdriver.utils.FirebaseAuthManager
 import com.triappdriver.utils.GeoLocationTracker
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.sample
@@ -21,30 +22,21 @@ class LocationSender(
     suspend fun start() {
         geoLocationTracker.coordinate
             .filterNotNull()
-            .onStart {
-                geoLocationTracker.coordinate.value?.let { emit(it) }
+            .combine(appPreferences.isDriverActive()) { coord, active ->
+                coord to active
             }
             .sample(30_000)
-            .collect { coordinate ->
-                send(coordinate)
+            .collect { (coordinate, active) ->
+                println("📍 coordinate : $coordinate")
+                println("📍 active : $active")
+                api.sendLocation(
+                    LocationRequest(
+                        driverId = firebaseAuthManager.getCurrentUser()?.userId.orEmpty(),
+                        latitude = coordinate.latitude,
+                        longitude = coordinate.longitude,
+                        status = if (active) "BUSY" else "AVAILABLE"
+                    )
+                )
             }
     }
-
-    private suspend fun send(coordinate: Coordinate) {
-        var status = "UNAVAILABLE"
-        appPreferences.isDriverActive()
-            .collect {
-                status = if (it) "BUSY" else "AVAILABLE"
-            }
-
-        api.sendLocation(
-            LocationRequest(
-                driverId = firebaseAuthManager.getCurrentUser()?.userId.orEmpty(),
-                latitude = coordinate.latitude,
-                longitude = coordinate.longitude,
-                status = status
-            )
-        )
-    }
-
 }

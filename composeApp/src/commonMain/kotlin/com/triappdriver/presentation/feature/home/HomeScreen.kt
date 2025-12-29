@@ -87,7 +87,7 @@ fun DriverHomeScreen(
 
     ModalNavigationDrawer(
         drawerState = drawerState,
-        gesturesEnabled = uiState.step is HomeStep.Offline || uiState.step is HomeStep.OnlineSearching,
+        gesturesEnabled = false,
         drawerContent = {
             ProfileFlowScreen(
                 onBack = { scope.launch { drawerState.close() } },
@@ -150,7 +150,8 @@ fun DriverHomeScreen(
 
                     // 1. MAPA (Camada de Fundo)
                     SimulatedMap(
-                        riderPosition = uiState.driverPosition,
+                        driverPosition = uiState.driverPosition,
+                        riderPosition = uiState.pickupCoordinate,
                         routePolyline = uiState.routePolyline
                     )
 
@@ -691,21 +692,14 @@ fun ActiveRideBottomPanel(step: HomeStep, viewModel: HomeViewModel) {
 
 
 @Composable
-fun SimulatedMap(riderPosition: Coordinate?, routePolyline: List<Coordinate>? = null) {
-    // Injeta a mesma instância que o Service está usando
-    val tracker: GeoLocationTracker = koinInject<GeoLocationTracker>()
-
-    val currentCoordinate by tracker.coordinate.collectAsState()
-
-    val mappedRider = riderPosition?.let { Coordinate(it.latitude, it.longitude) }
-
+fun SimulatedMap(driverPosition: Coordinate?, riderPosition: Coordinate?, routePolyline: List<Coordinate>? = null) {
     Box(modifier = Modifier.fillMaxSize()) {
-        currentCoordinate?.let { coord ->
+        driverPosition?.let { coord ->
             MapViewComponent(
                 modifier = Modifier.fillMaxSize(),
-                coordinate = coord,
+                coordinate = driverPosition,
                 routePolyline = routePolyline,
-                riderPosition = mappedRider
+                riderPosition = riderPosition
             )
         } ?: run {
             // Feedback visual enquanto a primeira posição não chega

@@ -2,6 +2,7 @@ package com.triappdriver.local
 
 import com.russhwolf.settings.ObservableSettings
 import com.russhwolf.settings.coroutines.getBooleanFlow
+import com.russhwolf.settings.coroutines.getStringFlow
 import com.russhwolf.settings.coroutines.getStringOrNullFlow
 import com.triappdriver.domain.model.SignUpDomainModel
 import kotlinx.coroutines.flow.Flow
@@ -17,6 +18,7 @@ class AppPreferences(
     private val IS_DARK_MODE_KEY = "is_dark_mode"
     private val SIGN_UP_DRAFT_KEY = "sign_up_draft"
     private val DRIVER_ACTIVE = "diver_active"
+    private val DRIVER_CURRENT_TRIP = "diver_current_trip"
 
     fun observeLastTenantId(): Flow<String?> =
         settings.getStringOrNullFlow(LAST_TENANT_ID_KEY)
@@ -37,6 +39,13 @@ class AppPreferences(
 
     fun driverActive(isDriverActive: Boolean) {
         settings.putBoolean(DRIVER_ACTIVE, isDriverActive)
+    }
+
+    fun isDriverCurrentTrip(): Flow<String> =
+        settings.getStringFlow(DRIVER_CURRENT_TRIP, defaultValue = "")
+
+    fun driverCurrentTrip(currentTrip: String) {
+        settings.putString(DRIVER_CURRENT_TRIP, currentTrip)
     }
 
     fun observeSignUpDraft(): Flow<String?> =

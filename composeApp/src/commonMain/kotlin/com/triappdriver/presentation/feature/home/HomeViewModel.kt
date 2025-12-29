@@ -1,30 +1,30 @@
 package com.triappdriver.presentation.feature.home
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CreditCard
-import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewModelScope
 import com.triappdriver.data.dtos.LocationDTO
 import com.triappdriver.data.dtos.RiderFirebaseDTO
 import com.triappdriver.data.repository.MapboxSearchRepository
-import com.triappdriver.domain.model.*
-import com.triappdriver.domain.model.HomeStep.*
+import com.triappdriver.domain.model.Coordinate
+import com.triappdriver.domain.model.HomeDomainModel
+import com.triappdriver.domain.model.HomeStep
+import com.triappdriver.domain.model.HomeStep.InProgress
+import com.triappdriver.domain.model.HomeStep.NavigatingToPickup
+import com.triappdriver.domain.model.HomeStep.Offline
+import com.triappdriver.domain.model.HomeStep.OnlineSearching
+import com.triappdriver.domain.model.HomeStep.RideCompleted
+import com.triappdriver.domain.model.HomeStep.RideOffer
+import com.triappdriver.domain.model.TaxiState
 import com.triappdriver.domain.usecase.GetRatingLastUseCase
 import com.triappdriver.domain.usecase.TaxiUseCase
 import com.triappdriver.local.AppPreferences
 import com.triappdriver.presentation.BaseViewModel
-import com.triappdriver.utils.LocationRepository
-import dev.icerock.moko.geo.LatLng
+import com.triappdriver.utils.GeoLocationTracker
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
 
 class HomeViewModel(
     private val getRatingUseCase: GetRatingLastUseCase,
-    private val locationRepository: LocationRepository,
+    private val geoLocationTracker: GeoLocationTracker,
     private val mapboxRepository: MapboxSearchRepository,
     private val appPreferences: AppPreferences,
     private val taxiUseCase: TaxiUseCase,
@@ -39,20 +39,19 @@ class HomeViewModel(
     private var rideMetricsJob: Job? = null
 
     init {
+        appPreferences.driverActive(false)
         loadInitialData()
         restoreSession()
     }
 
     private fun loadInitialData() {
         viewModelScope.launch {
-            val permission = locationRepository.requestLocationPermission()
-
-            if (permission) {
-                val loc = locationRepository.getCurrentLocation()
+            geoLocationTracker.coordinate.collect { loc ->
                 if (loc != null) {
+                    println("📍 NOVA loc: $loc")
                     updateState { s ->
                         s.copy(
-                            driverPosition = Coordinate(loc.first, loc.second)
+                            driverPosition = Coordinate(loc.latitude, loc.longitude)
                         )
                     }
                 }
@@ -70,8 +69,7 @@ class HomeViewModel(
             HomeIntent.AcceptRide -> acceptRide()
             HomeIntent.RejectRide -> rejectRide()
 
-            HomeIntent.ArrivedAtPickup -> updateRideStatus("ONGOING")
-            HomeIntent.StartRide -> updateRideStatus("ONGOING")
+            HomeIntent.ArrivedAtPickup, HomeIntent.StartRide -> updateRideStatus("ONGOING")
             HomeIntent.EndRide -> updateRideStatus("COMPLETED")
 
             // --- Outros ---
@@ -87,6 +85,7 @@ class HomeViewModel(
     // ONLINE / OFFLINE
     // -----------------------------------------------------
     private fun goOnline() {
+        appPreferences.driverActive(true)
         updateState { it.copy(step = OnlineSearching, isOnline = true) }
         viewModelScope.launch {
             taxiUseCase.enabledOnline().collect { taxiState ->
@@ -193,15 +192,15 @@ class HomeViewModel(
                     // NOTA: mapboxRepository.getRoutePolyline deve ser capaz de receber LatLng
                     val routeResult = mapboxRepository.getRoutePolyline(origin!!, destination)
 
-                    val distanceMeters = routeResult?.distance?.toInt() ?: 0
+                    val distanceMeters = routeResult?.distance?.div(1000)?.toInt() ?: 0
                     // Duration está em segundos, converter para minutos
                     val etaMinutes = (routeResult?.duration?.div(60.0))?.toInt() ?: 0
 
                     // Atualiza o estado da UI com as métricas e a polyline
                     updateState { s ->
                         s.copy(
-                            etaMinutes = etaMinutes.coerceAtLeast(1),
-                            distanceMeters = distanceMeters.coerceAtLeast(0),
+                            etaMinutes = etaMinutes,
+                            distanceMeters = distanceMeters,
                         )
                     }
 
@@ -236,10 +235,15 @@ class HomeViewModel(
         when (taxiState) {
             is TaxiState.Online -> {
                 currentTripId = taxiState.rider.tripId
+                appPreferences.driverCurrentTrip(currentTripId.orEmpty())
+
                 if (currentTripId != null) {
                     val rider: RiderFirebaseDTO = taxiState.rider
 
-                    val passengerName = rider.rider.name.orEmpty()
+                    val passengerName = rider.name.orEmpty()
+                    val fare = rider.fare.orEmpty()
+                    val etaMin = rider.etaMin.orEmpty()
+                    val distance = rider.distance.orEmpty()
                     val pickupAddress = rider.pickup.name.orEmpty()
                     val destinationAddress = rider.rider.location.name.orEmpty()
 
@@ -254,16 +258,16 @@ class HomeViewModel(
                             currentPickupAddress = pickupAddress,
                             currentDestinationAddress = destinationAddress,
                             currentPassengerNote = rider.rider.note,
-                            currentFare = "R$ 0,00", // Definir valor real se estiver no DTO
+                            currentFare = fare, // Definir valor real se estiver no DTO
                             pickupCoordinate = pickupCoord, // SALVANDO COORDENADAS
                             destinationCoordinate = destinationCoord, // SALVANDO COORDENADAS
                             step = RideOffer(
                                 passengerName = passengerName,
                                 pickupAddress = pickupAddress,
                                 destinationAddress = destinationAddress,
-                                distanceToPickup = "calculando...",
-                                estimatedFare = "R$ --,--",
-                                eta = "-- min",
+                                distanceToPickup = distance,
+                                estimatedFare = fare,
+                                eta = "$etaMin min",
                                 passengerNote = rider.rider.note
                             )
                         )
@@ -347,13 +351,14 @@ class HomeViewModel(
     // -----------------------------------------------------
     private fun restoreSession() {
         viewModelScope.launch {
-            appPreferences.isDriverActive().collect { isOnline ->
-                if (isOnline) {
-                    // Simplesmente volta para o modo online, o listener de rides cuida do resto
-                    updateState { it.copy(isOnline = true) }
-                    // Se houver tripId ativo salvo, iniciar listeners
-                    //startFirestoreListener()
-                }
+            appPreferences.isDriverCurrentTrip().collect { driverCurrentTrip ->
+                if (driverCurrentTrip.isBlank()) return@collect
+                // Simplesmente volta para o modo online, o listener de rides cuida do resto
+                currentTripId = driverCurrentTrip
+                updateState { it.copy(isOnline = true) }
+                appPreferences.driverActive(true)
+                // Se houver tripId ativo salvo, iniciar listeners
+                startFirestoreListener()
             }
         }
     }

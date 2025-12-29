@@ -6,6 +6,7 @@ import dev.icerock.moko.permissions.PermissionsController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,21 +27,14 @@ class GeoLocationTracker(
         isTracking = true
 
         scope.launch {
-            try {
-                println("🚀 GeoLocationTracker: Solicitando permissão via Moko...")
+            if (!repository.requestLocationPermission()) return@launch
 
-                val permission = repository.requestLocationPermission()
-
-                if (permission) {
-                    val loc = repository.getCurrentLocation()
-                    if (loc != null) {
-                        println("📍 Moko RECEBIDA: ${loc}")
-                        _coordinate.value = Coordinate(loc.first, loc.second)
-                    }
+            while (isTracking) {
+                repository.getCurrentLocation()?.let {
+                    println("📍 NOVA localização: $it")
+                    _coordinate.value = Coordinate(it.first, it.second)
                 }
-            } catch (e: Exception) {
-                isTracking = false
-                println("❌ Erro no MokoTracker: ${e.message}")
+                delay(10_000)
             }
         }
     }

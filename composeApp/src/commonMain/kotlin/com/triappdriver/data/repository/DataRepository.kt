@@ -38,7 +38,6 @@ interface DataRepository {
 class DataRepositoryImpl(
     private val apiService: ApiService,
     private val authManager: FirebaseAuthManager,
-    private val appPreferences: AppPreferences
 ) : DataRepository {
 
     override suspend fun fetchProducts(): List<ProductDomainModel> {
@@ -82,7 +81,6 @@ class DataRepositoryImpl(
         tripId: String,
         location: LocationDTO
     ) {
-        appPreferences.driverActive(true)
         apiService.rideAccepted(
             tripId,
             RideStatusRequestAcceptedDTO(
@@ -125,7 +123,6 @@ class DataRepositoryImpl(
         tripId: String,
         location: LocationDTO
     ) {
-        appPreferences.driverActive(false)
         apiService.rideCompleted(
             tripId,
             RideStatusRequestCompletedDTO(
