@@ -16,15 +16,6 @@ sealed class SignupIntent : ViewIntent<Nothing> {
     data class EnterPlaca(val placa: String) : SignupIntent()
     data class EnterInsurance(val insurance: String) : SignupIntent()
     data class EnterValidate(val date: String) : SignupIntent()
-    data class EnterBankingInfo(
-        val selectedBank : String,
-        val selectedAccountType: String,
-        val agencia: String,
-        val conta: String,
-        val digito : String,
-        val nomeTitular: String,
-        val cpfCnpj: String
-    ) : SignupIntent()
     data class VerifyCode(val code: String) : SignupIntent()
     data class SendResetCode(val activity: Any?) : SignupIntent()
     data class UploadProfilePhoto(val path: String) : SignupIntent()
@@ -37,8 +28,7 @@ enum class SignupStep(val title: String, val progress: Float) {
     PersonalInfo("Personal Information", 0.13f),
     Car("Car", 0.25f),
     Documents("Document verification", 0.40f),
-    Banking("Banking", 0.55f),
-    Contact("Contact details", 0.70f),
+    Contact("Contact details", 0.60f),
     Verification("Verificação SMS", 0.85f),
     Success("All set!", 1.0f)
 }

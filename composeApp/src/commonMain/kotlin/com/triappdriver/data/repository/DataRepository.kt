@@ -1,17 +1,19 @@
 package com.triappdriver.data.repository
 
+import com.triappdriver.data.ApiIngestionService
 import com.triappdriver.data.ApiService
 import com.triappdriver.data.dtos.CardBody
 import com.triappdriver.data.dtos.LocationDTO
 import com.triappdriver.data.dtos.RideRequestDTO
-import com.triappdriver.data.dtos.RideStatusRequestDTO
+import com.triappdriver.data.dtos.RideStatusRequestAcceptedDTO
+import com.triappdriver.data.dtos.RideStatusRequestCompletedDTO
+import com.triappdriver.data.dtos.RideStatusRequestOnGoingDTO
+import com.triappdriver.data.dtos.RideStatusRequestRejectedDTO
 import com.triappdriver.domain.model.Coordinate
 import com.triappdriver.domain.model.ProductDomainModel
 import com.triappdriver.domain.model.WalletDomainModel
+import com.triappdriver.local.AppPreferences
 import com.triappdriver.utils.FirebaseAuthManager
-import de.jensklingenberg.ktorfit.http.Body
-import de.jensklingenberg.ktorfit.http.POST
-import de.jensklingenberg.ktorfit.http.Path
 
 interface DataRepository {
     suspend fun fetchProducts(): List<ProductDomainModel>
@@ -26,15 +28,17 @@ interface DataRepository {
 
     suspend fun cardOptions(model: WalletDomainModel): WalletDomainModel
 
-    suspend fun rideAccepted(tripId: String)
     suspend fun rideRejected(tripId: String)
-    suspend fun rideOnGoing(tripId: String)
+    suspend fun rideAccepted(tripId: String, location: LocationDTO)
+    suspend fun rideOnGoing(tripId: String, location: LocationDTO)
+    suspend fun rideCompleted(tripId: String, location: LocationDTO)
 }
 
 
 class DataRepositoryImpl(
     private val apiService: ApiService,
-    private val authManager: FirebaseAuthManager
+    private val authManager: FirebaseAuthManager,
+    private val appPreferences: AppPreferences
 ) : DataRepository {
 
     override suspend fun fetchProducts(): List<ProductDomainModel> {
@@ -75,13 +79,16 @@ class DataRepositoryImpl(
     }
 
     override suspend fun rideAccepted(
-        tripId: String
+        tripId: String,
+        location: LocationDTO
     ) {
+        appPreferences.driverActive(true)
         apiService.rideAccepted(
             tripId,
-            RideStatusRequestDTO(
+            RideStatusRequestAcceptedDTO(
                 tripId = tripId,
-                driverId = authManager.getCurrentUser()?.userId.orEmpty()
+                driverId = authManager.getCurrentUser()?.userId.orEmpty(),
+                currentLocation = location
             )
         )
     }
@@ -91,15 +98,44 @@ class DataRepositoryImpl(
     ) {
         apiService.rideRejected(
             tripId,
-            RideStatusRequestDTO(
+            RideStatusRequestRejectedDTO(
                 tripId = tripId,
-                driverId = authManager.getCurrentUser()?.userId.orEmpty()
+                driverId = authManager.getCurrentUser()?.userId.orEmpty(),
+                status = "REJECTED",
+                reason = "Sem disponibilidade"
             )
         )
     }
 
-    override suspend fun rideOnGoing(tripId: String) {
-        apiService.rideOnGoing(tripId)
+    override suspend fun rideOnGoing(
+        tripId: String,
+        location: LocationDTO
+    ) {
+        apiService.rideOnGoing(
+            tripId,
+            RideStatusRequestOnGoingDTO(
+                tripId = tripId,
+                driverId = authManager.getCurrentUser()?.userId.orEmpty(),
+                pickupLocation = location
+            )
+        )
+    }
+
+    override suspend fun rideCompleted(
+        tripId: String,
+        location: LocationDTO
+    ) {
+        appPreferences.driverActive(false)
+        apiService.rideCompleted(
+            tripId,
+            RideStatusRequestCompletedDTO(
+                tripId = tripId,
+                driverId = authManager.getCurrentUser()?.userId.orEmpty(),
+                dropoffLocation = location,
+                distanceKm = 0.0,
+                durationMin = 0.0,
+            )
+        )
     }
 
     override suspend fun cardOptions(model: WalletDomainModel): WalletDomainModel {

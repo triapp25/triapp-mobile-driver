@@ -21,17 +21,6 @@ class SignupViewModel(
             is SignupIntent.EnterValidate -> updateAndValidate { it.copy(validate = intent.date) }
             is SignupIntent.UploadProfilePhoto -> updateAndValidate { it.copy(profilePhotoPath = intent.path) }
             is SignupIntent.UploadIdDocument -> updateAndValidate { it.copy(idDocumentPath = intent.path) }
-            is SignupIntent.EnterBankingInfo -> updateAndValidate {
-                it.copy(
-                    selectedBank = intent.selectedBank,
-                    selectedAccountType = intent.selectedAccountType,
-                    digito = intent.digito,
-                    conta = intent.conta,
-                    agencia = intent.agencia,
-                    cpfCnpj = intent.cpfCnpj,
-                    nomeTitular = intent.nomeTitular
-                )
-            }
 
             is SignupIntent.EnterPhone -> {
                 requestPhoneCode(activity = intent.activity, phone = intent.phone)
@@ -64,8 +53,7 @@ class SignupViewModel(
         val next = when (state.value.currentStep) {
             SignupStep.PersonalInfo -> SignupStep.Car
             SignupStep.Car -> SignupStep.Documents
-            SignupStep.Documents -> SignupStep.Banking
-            SignupStep.Banking -> SignupStep.Contact
+            SignupStep.Documents -> SignupStep.Contact
             SignupStep.Contact -> SignupStep.Verification
             SignupStep.Verification -> SignupStep.Success
             SignupStep.Success -> SignupStep.Success
@@ -82,8 +70,7 @@ class SignupViewModel(
         val prev = when (state.value.currentStep) {
             SignupStep.Car -> SignupStep.PersonalInfo
             SignupStep.Documents -> SignupStep.Car
-            SignupStep.Banking -> SignupStep.Documents
-            SignupStep.Contact -> SignupStep.Banking
+            SignupStep.Contact -> SignupStep.Documents
             SignupStep.Verification -> SignupStep.Contact
             SignupStep.PersonalInfo, SignupStep.Success -> SignupStep.PersonalInfo
         }
@@ -173,13 +160,6 @@ class SignupViewModel(
             SignupStep.Car ->
                 state.placa.isNotBlank() && state.insurance.isNotBlank() && state.validate.isNotBlank()
 
-            SignupStep.Banking ->
-                state.selectedBank.isNotBlank() && state.selectedAccountType.isNotBlank() &&
-                        state.digito.isNotBlank() && state.conta.isNotBlank() &&
-                        state.agencia.isNotBlank() && state.cpfCnpj.isNotBlank() &&
-                        state.nomeTitular.isNotBlank()
-
-
             SignupStep.Documents ->
                 state.profilePhotoPath != null &&
                         state.idDocumentPath != null
@@ -190,7 +170,6 @@ class SignupViewModel(
             SignupStep.Success ->
                 true
 
-            SignupStep.Banking -> true
         }
     }
 

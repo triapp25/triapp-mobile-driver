@@ -4,6 +4,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewModelScope
+import com.triappdriver.data.dtos.LocationDTO
 import com.triappdriver.data.dtos.RiderFirebaseDTO
 import com.triappdriver.data.repository.MapboxSearchRepository
 import com.triappdriver.domain.model.*
@@ -126,7 +127,15 @@ class HomeViewModel(
     private fun updateRideStatus(newStatus: String) {
         viewModelScope.launch {
             try {
-                taxiUseCase.updateTripStatus(currentTripId.orEmpty(), newStatus)
+
+                taxiUseCase.updateTripStatus(
+                    currentTripId.orEmpty(), newStatus,
+                    LocationDTO(
+                        lat = state.value.driverPosition?.latitude ?: 0.0,
+                        lng = state.value.driverPosition?.longitude ?: 0.0,
+                        address = state.value.currentDestinationAddress.orEmpty()
+                    )
+                )
             } catch (e: Exception) {
                 // Tratar erro de rede (ex: exibir Snackbar)
                 e.printStackTrace()
@@ -227,35 +236,38 @@ class HomeViewModel(
         when (taxiState) {
             is TaxiState.Online -> {
                 currentTripId = taxiState.rider.tripId
-                val rider: RiderFirebaseDTO = taxiState.rider
+                if (currentTripId != null) {
+                    val rider: RiderFirebaseDTO = taxiState.rider
 
-                val passengerName = rider.rider.name.orEmpty()
-                val pickupAddress = rider.pickup.name.orEmpty()
-                val destinationAddress = rider.rider.location.name.orEmpty()
+                    val passengerName = rider.rider.name.orEmpty()
+                    val pickupAddress = rider.pickup.name.orEmpty()
+                    val destinationAddress = rider.rider.location.name.orEmpty()
 
-                val pickupCoord = Coordinate(rider.pickup.lat, rider.pickup.lng)
-                val destinationCoord = Coordinate(rider.rider.location.lat, rider.rider.location.lng)
+                    val pickupCoord = Coordinate(rider.pickup.lat, rider.pickup.lng)
+                    val destinationCoord =
+                        Coordinate(rider.rider.location.lat, rider.rider.location.lng)
 
-                // 1. SALVAR DADOS NO ESTADO DO VIEWMODEL (Incluindo Coordenadas)
-                updateState {
-                    it.copy(
-                        currentRiderName = passengerName,
-                        currentPickupAddress = pickupAddress,
-                        currentDestinationAddress = destinationAddress,
-                        currentPassengerNote = rider.rider.note,
-                        currentFare = "R$ 0,00", // Definir valor real se estiver no DTO
-                        pickupCoordinate = pickupCoord, // SALVANDO COORDENADAS
-                        destinationCoordinate = destinationCoord, // SALVANDO COORDENADAS
-                        step = RideOffer(
-                            passengerName = passengerName,
-                            pickupAddress = pickupAddress,
-                            destinationAddress = destinationAddress,
-                            distanceToPickup = "calculando...",
-                            estimatedFare = "R$ --,--",
-                            eta = "-- min",
-                            passengerNote = rider.rider.note
+                    // 1. SALVAR DADOS NO ESTADO DO VIEWMODEL (Incluindo Coordenadas)
+                    updateState {
+                        it.copy(
+                            currentRiderName = passengerName,
+                            currentPickupAddress = pickupAddress,
+                            currentDestinationAddress = destinationAddress,
+                            currentPassengerNote = rider.rider.note,
+                            currentFare = "R$ 0,00", // Definir valor real se estiver no DTO
+                            pickupCoordinate = pickupCoord, // SALVANDO COORDENADAS
+                            destinationCoordinate = destinationCoord, // SALVANDO COORDENADAS
+                            step = RideOffer(
+                                passengerName = passengerName,
+                                pickupAddress = pickupAddress,
+                                destinationAddress = destinationAddress,
+                                distanceToPickup = "calculando...",
+                                estimatedFare = "R$ --,--",
+                                eta = "-- min",
+                                passengerNote = rider.rider.note
+                            )
                         )
-                    )
+                    }
                 }
             }
 
@@ -285,9 +297,7 @@ class HomeViewModel(
                         )
                     }
 
-                    "IN_PROGRESS" -> {
-                        // Viagem iniciada. O rastreamento de métricas agora foca no DESTINO.
-                        // O `startRideMetricsTracking` já faz isso automaticamente ao checar o `state.value.step`.
+                    "ONGOING" -> {
                         InProgress(
                             passengerName = savedRiderName,
                             destinationAddress = savedDestinationAddress,
@@ -342,7 +352,7 @@ class HomeViewModel(
                     // Simplesmente volta para o modo online, o listener de rides cuida do resto
                     updateState { it.copy(isOnline = true) }
                     // Se houver tripId ativo salvo, iniciar listeners
-                    // startFirestoreListener()
+                    //startFirestoreListener()
                 }
             }
         }

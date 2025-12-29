@@ -1,5 +1,6 @@
 package com.triappdriver.domain.usecase
 
+import com.triappdriver.data.dtos.LocationDTO
 import com.triappdriver.data.firestore.FirestoreRepository
 import com.triappdriver.data.firestore.listenDocumentUntilDone
 import com.triappdriver.data.firestore.listenOnline
@@ -35,16 +36,16 @@ class TaxiUseCase(
     }
 
     // 2. Funções para o Motorista alterar o status no Firestore
-    suspend fun updateTripStatus(tripId: String, newStatus: String) {
+    suspend fun updateTripStatus(tripId: String, newStatus: String, location: LocationDTO?) {
         try {
             if (newStatus == "COMPLETED") {
-                // dataRepository.rideCompleted(tripId)
+                dataRepository.rideCompleted(tripId, location!!)
             } else if (newStatus == "ACCEPTED") {
-                dataRepository.rideAccepted(tripId)
+                dataRepository.rideAccepted(tripId, location!!)
             } else if (newStatus == "REJECTED") {
                 dataRepository.rideRejected(tripId)
             } else if (newStatus == "ONGOING") {
-                dataRepository.rideOnGoing(tripId)
+                dataRepository.rideOnGoing(tripId, location!!)
             }
             Result.success(Unit)
         } catch (e: Exception) {

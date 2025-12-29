@@ -130,7 +130,6 @@ fun SignupFlowScreen(
                         onUploadId = { path -> onAction(UploadIdDocument(path)) }
                     )
 
-                    SignupStep.Banking -> StepBanking(uiState, onAction)
                     SignupStep.Contact -> StepContact(activity, uiState, onAction)
 
                     SignupStep.Verification -> SmsVerificationScreen(
@@ -182,7 +181,7 @@ fun SignupTopBar(step: SignupStep, onBack: () -> Unit) {
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = "${step.ordinal + 1}/6",
+                    text = "${step.ordinal + 1}/5",
                     color = MaterialTheme.colorScheme.secondary,
                     fontSize = 12.sp
                 )
@@ -340,17 +339,17 @@ fun StepBanking(uiState: SignUpDomainModel, onAction: (SignupIntent) -> Unit) {
 
         Button(
             onClick = {
-                onAction(
-                    SignupIntent.EnterBankingInfo(
-                        selectedBank,
-                        selectedAccountType,
-                        agencia,
-                        conta,
-                        digito,
-                        nomeTitular,
-                        cpfCnpj
-                    )
-                )
+                //onAction(
+                //   SignupIntent.EnterBankingInfo(
+                //       selectedBank,
+                //       selectedAccountType,
+                //       agencia,
+                //       conta,
+                //       digito,
+                //       nomeTitular,
+                //       cpfCnpj
+                //   )
+                //)
             },
             enabled = canSave,
             modifier = Modifier

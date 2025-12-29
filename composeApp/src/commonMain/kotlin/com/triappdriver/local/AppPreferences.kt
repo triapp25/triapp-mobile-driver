@@ -16,7 +16,7 @@ class AppPreferences(
     private val LAST_TENANT_ID_KEY = "last_tenant_id"
     private val IS_DARK_MODE_KEY = "is_dark_mode"
     private val SIGN_UP_DRAFT_KEY = "sign_up_draft"
-    private val DRIVER_ACTIVE = "diver_activie"
+    private val DRIVER_ACTIVE = "diver_active"
 
     fun observeLastTenantId(): Flow<String?> =
         settings.getStringOrNullFlow(LAST_TENANT_ID_KEY)
@@ -35,7 +35,7 @@ class AppPreferences(
     fun isDriverActive(): Flow<Boolean> =
         settings.getBooleanFlow(DRIVER_ACTIVE, defaultValue = false)
 
-    suspend fun driverActive(isDriverActive: Boolean) {
+    fun driverActive(isDriverActive: Boolean) {
         settings.putBoolean(DRIVER_ACTIVE, isDriverActive)
     }
 

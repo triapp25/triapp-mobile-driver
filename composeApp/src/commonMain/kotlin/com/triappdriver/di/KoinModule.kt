@@ -1,10 +1,10 @@
 package com.triappdriver.di
 
 import com.russhwolf.settings.Settings
+import com.triappdriver.data.ApiIngestionService
 import com.triappdriver.data.ApiService
 import com.triappdriver.data.LocationSender
 import com.triappdriver.data.MapboxApiService
-import com.triappdriver.data.NetworkProvider
 import com.triappdriver.data.repository.DataRepository
 import com.triappdriver.data.repository.DataRepositoryImpl
 import com.triappdriver.data.repository.MapboxSearchRepository
@@ -56,6 +56,7 @@ import org.koin.dsl.module
 
 expect fun getPlatformHttpClientEngineFactory(): HttpClientEngineFactory<*>
 private val KtorfitDefault = named("ktorfitDefault")
+private val KtorfitIngestion = named("KtorfitIngestion")
 private val KtorfitMapbox = named("ktorfitMapbox")
 
 val networkModule = module {
@@ -93,10 +94,37 @@ val networkModule = module {
         }
     }
 
+    single(KtorfitIngestion) {
+        //val config: TenantConfig = get<TenantConfig>()
+        HttpClient(engineFactory = get<HttpClientEngineFactory<*>>()) {
+            install(ContentNegotiation) {
+                json(
+                    Json {
+                        ignoreUnknownKeys = true
+                        encodeDefaults = true
+                        prettyPrint = false
+                    }
+                )
+            }
+            // Optional but recommended:
+            defaultRequest {
+                url("https://triapp-ingestion-service-6967168117.us-east1.run.app")
+                contentType(ContentType.Application.Json)
+                accept(ContentType.Application.Json)
+            }
+        }
+    }
+
     // Builder Ktorfit
     single {
         Ktorfit.Builder()
             .httpClient(get<HttpClient>())
+            .build()
+    }
+
+    single(KtorfitIngestion) {
+        Ktorfit.Builder()
+            .httpClient(get<HttpClient>(KtorfitIngestion))
             .build()
     }
 
@@ -113,19 +141,16 @@ val networkModule = module {
 
     single<ApiService> { get<Ktorfit>().create() }
 
-    single<NetworkProvider> {
-        NetworkProvider(
-            apiService = get()
-        )
-    }
-}
+    single<ApiIngestionService>(KtorfitIngestion) {
+        get<Ktorfit>(KtorfitIngestion).create()
+    }}
 
 val authModule = module {
     singleOf(::FirebaseServiceImpl).bind<FirebaseAuthManager>()
 }
 
 val repositoryModule = module {
-    single<DataRepository> { DataRepositoryImpl(get(), get()) }
+    single<DataRepository> { DataRepositoryImpl(get(), get(), get()) }
     single { LocationRepository(get()) }
     single<RideRepository> { RideRepositoryImpl(get()) }
     single<RatingRepository> { RatingRepositoryImpl(get(), get()) }
@@ -150,9 +175,10 @@ val repositoryModule = module {
 
     single {
         LocationSender(
-            api = get(),
+            api = get<ApiIngestionService>(KtorfitIngestion),
             geoLocationTracker = get(),
-            firebaseAuthManager = get()
+            firebaseAuthManager = get(),
+            appPreferences = get()
         )
     }
 
