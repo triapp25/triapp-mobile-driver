@@ -68,7 +68,6 @@ class HomeViewModel(
             // --- Ações do Motorista (Atualizam o Firestore) ---
             HomeIntent.AcceptRide -> acceptRide()
             HomeIntent.RejectRide -> rejectRide()
-
             HomeIntent.ArrivedAtPickup, HomeIntent.StartRide -> updateRideStatus("ONGOING")
             HomeIntent.EndRide -> updateRideStatus("COMPLETED")
 
@@ -97,6 +96,7 @@ class HomeViewModel(
     private fun goOffline() {
         stopFirestoreListener()
         stopRideMetricsTracking() // NOVO: Para o rastreamento
+        appPreferences.driverCurrentTrip("")
         updateState { it.copy(step = Offline, isOnline = false) }
     }
 
@@ -117,6 +117,7 @@ class HomeViewModel(
 
     private fun rejectRide() {
         // Opcional: Avisar backend que rejeitou
+        updateRideStatus("REJECTED")
         updateState { it.copy(step = OnlineSearching) }
     }
 
@@ -235,7 +236,6 @@ class HomeViewModel(
         when (taxiState) {
             is TaxiState.Online -> {
                 currentTripId = taxiState.rider.tripId
-                appPreferences.driverCurrentTrip(currentTripId.orEmpty())
 
                 if (currentTripId != null) {
                     val rider: RiderFirebaseDTO = taxiState.rider
@@ -265,7 +265,7 @@ class HomeViewModel(
                                 passengerName = passengerName,
                                 pickupAddress = pickupAddress,
                                 destinationAddress = destinationAddress,
-                                distanceToPickup = distance,
+                                distanceToPickup = "$distance Km",
                                 estimatedFare = fare,
                                 eta = "$etaMin min",
                                 passengerNote = rider.rider.note
@@ -287,6 +287,7 @@ class HomeViewModel(
                 val nextStep = when (status) {
                     "ACCEPTED" -> {
                         // O rastreamento de métricas já foi iniciado em acceptRide()
+                        appPreferences.driverCurrentTrip(currentTripId.orEmpty())
                         NavigatingToPickup(
                             passengerName = savedRiderName,
                             pickupAddress = savedPickupAddress
@@ -310,6 +311,7 @@ class HomeViewModel(
                     }
 
                     "COMPLETED" -> {
+                        appPreferences.driverCurrentTrip("")
                         RideCompleted(savedRiderName)
                     }
 

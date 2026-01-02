@@ -76,8 +76,8 @@ fun mapDocumentToRideRequest(data: Map<String, Any?>): RiderFirebaseDTO? {
     val status = data["status"] as? String ?: return null
     val tripId = data["tripId"] as? String ?: return null
     val riderName = data["riderName"] as? String ?: return null
-    val etaMin = data["etaMinutes"] as? String ?: "10:00" // Valor padrão se não existir
-    val distance = data["distanceEstimated"] as? String ?: "6km"
+    val etaMin = data["etaMinutes"] as? Double ?: 0.0 // Valor padrão se não existir
+    val distance = data["distanceEstimated"] as? Double ?: 0.0
     val fare = data["finalPrice"] as? String ?: "23.50"
     val rating = data["riderRating"] as? Double ?: return null
 
@@ -116,8 +116,8 @@ fun mapDocumentToRideRequest(data: Map<String, Any?>): RiderFirebaseDTO? {
     return RiderFirebaseDTO(
         status = status,
         tripId = tripId,
-        etaMin = etaMin,
-        distance = distance,
+        etaMin = etaMin.toString(),
+        distance = distance.toString(),
         fare = fare,
         name = riderName,
         rating = rating,

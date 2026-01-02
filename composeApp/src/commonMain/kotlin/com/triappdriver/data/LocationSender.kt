@@ -20,23 +20,43 @@ class LocationSender(
 
     @OptIn(FlowPreview::class)
     suspend fun start() {
-        geoLocationTracker.coordinate
-            .filterNotNull()
-            .combine(appPreferences.isDriverActive()) { coord, active ->
-                coord to active
-            }
+        combine(
+            geoLocationTracker.coordinate.filterNotNull(),
+            appPreferences.isDriverActive(),
+            appPreferences.isDriverCurrentTrip()
+        ) { coord, active, currentTrip ->
+            LocationState(
+                coordinate = coord,
+                isActive = active,
+                currentTrip = currentTrip
+            )
+        }
             .sample(30_000)
-            .collect { (coordinate, active) ->
-                println("📍 coordinate : $coordinate")
-                println("📍 active : $active")
+            .collect { state ->
+                val status = when {
+                    !state.isActive -> "OFFLINE"
+                    state.currentTrip.isNullOrEmpty() -> "AVAILABLE"
+                    else -> "BUSY   "
+                }
+
                 api.sendLocation(
                     LocationRequest(
-                        driverId = firebaseAuthManager.getCurrentUser()?.userId.orEmpty(),
-                        latitude = coordinate.latitude,
-                        longitude = coordinate.longitude,
-                        status = if (active) "BUSY" else "AVAILABLE"
+                        driverId = firebaseAuthManager
+                            .getCurrentUser()
+                            ?.userId
+                            .orEmpty(),
+                        latitude = state.coordinate.latitude,
+                        longitude = state.coordinate.longitude,
+                        status = status
                     )
                 )
             }
     }
+
 }
+
+data class LocationState(
+    val coordinate: Coordinate,
+    val isActive: Boolean,
+    val currentTrip: String?
+)

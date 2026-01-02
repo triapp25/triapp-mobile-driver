@@ -1,6 +1,8 @@
 package com.triappdriver.presentation.feature.home
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -33,6 +35,7 @@ import dev.icerock.moko.geo.LatLng
 import dev.icerock.moko.geo.compose.BindLocationTrackerEffect
 import dev.icerock.moko.permissions.Permission
 import dev.icerock.moko.permissions.location.LOCATION
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
@@ -258,8 +261,32 @@ fun HomeTopBar(
 fun RideRequestNotification(
     offer: HomeStep.RideOffer,
     onAccept: () -> Unit,
-    onDecline: () -> Unit
+    onDecline: () -> Unit,
+    totalTimeSeconds: Int = 10
 ) {
+
+    val progress = remember { Animatable(1f) }
+    var remainingTime by remember { mutableStateOf(totalTimeSeconds) }
+
+    LaunchedEffect(Unit) {
+        progress.animateTo(
+            targetValue = 0f,
+            animationSpec = tween(
+                durationMillis = totalTimeSeconds * 1000,
+                easing = LinearEasing
+            )
+        )
+    }
+
+    LaunchedEffect(Unit) {
+        while (remainingTime > 0) {
+            delay(1000)
+            remainingTime--
+        }
+        onDecline()
+    }
+
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -268,138 +295,158 @@ fun RideRequestNotification(
         colors = CardDefaults.cardColors(containerColor = DarkCardColor),
         elevation = CardDefaults.cardElevation(8.dp)
     ) {
-        Column(Modifier.padding(16.dp)) {
-            // Header
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Default.NotificationsActive,
-                    null,
-                    tint = TextWhite,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(Modifier.width(8.dp))
-                Text("Nova solicitação", color = TextWhite, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.weight(1f))
-                Text("12s para responder", color = TextGray, fontSize = 12.sp)
-            }
+        Column {
 
-            Spacer(Modifier.height(16.dp))
+            LinearProgressIndicator(
+                progress = { progress.value },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(4.dp),
+                color = Color.Red,
+                trackColor = Color.DarkGray
+            )
 
-            // Passageiro
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(48.dp).background(Color.Gray, CircleShape))
-                Spacer(Modifier.width(12.dp))
-                Column {
-                    Text(
-                        offer.passengerName,
-                        color = TextWhite,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
+            Column(Modifier.padding(16.dp)) {
+                // Header
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.NotificationsActive,
+                        null,
+                        tint = TextWhite,
+                        modifier = Modifier.size(20.dp)
                     )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        // Estrelas
-                        repeat(5) {
-                            Icon(
-                                Icons.Default.Star,
-                                null,
-                                tint = TextWhite,
-                                modifier = Modifier.size(12.dp)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Nova solicitação", color = TextWhite, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.weight(1f))
+                    Text("10s para responder", color = TextGray, fontSize = 12.sp)
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                // Passageiro
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(48.dp).background(Color.Gray, CircleShape))
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            offer.passengerName,
+                            color = TextWhite,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            // Estrelas
+                            repeat(5) {
+                                Icon(
+                                    Icons.Default.Star,
+                                    null,
+                                    tint = TextWhite,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                Row(Modifier.height(IntrinsicSize.Min)) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Default.Navigation,
+                            null,
+                            tint = TextWhite,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Box(Modifier.width(1.dp).weight(1f).background(Color.Gray))
+                        Icon(
+                            Icons.Default.LocationOn,
+                            null,
+                            tint = TextWhite,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column(
+                        verticalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxHeight()
+                    ) {
+                        Column {
+                            Text("Pegar", color = TextGray, fontSize = 12.sp)
+                            Text(
+                                offer.pickupAddress,
+                                color = TextWhite,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                offer.distanceToPickup + " faltantes",
+                                color = TextGray,
+                                fontSize = 12.sp
+                            )
+                        }
+                        Spacer(Modifier.height(16.dp))
+                        Column {
+                            Text("Destino", color = TextGray, fontSize = 12.sp)
+                            Text(
+                                offer.destinationAddress,
+                                color = TextWhite,
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
                 }
-            }
 
-            Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(20.dp))
 
-            Row(Modifier.height(IntrinsicSize.Min)) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        Icons.Default.Navigation,
-                        null,
-                        tint = TextWhite,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Box(Modifier.width(1.dp).weight(1f).background(Color.Gray))
-                    Icon(
-                        Icons.Default.LocationOn,
-                        null,
-                        tint = TextWhite,
-                        modifier = Modifier.size(16.dp)
-                    )
+                // Valores lado a lado
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Box(
+                        Modifier.weight(1f).background(Color(0xFF2C2C2C), RoundedCornerShape(8.dp))
+                            .padding(12.dp)
+                    ) {
+                        Column {
+                            Text("Valor", color = TextGray, fontSize = 12.sp)
+                            Text(
+                                offer.estimatedFare,
+                                color = TextWhite,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                    Box(
+                        Modifier.weight(1f).background(Color(0xFF2C2C2C), RoundedCornerShape(8.dp))
+                            .padding(12.dp)
+                    ) {
+                        Column {
+                            Text("Duração", color = TextGray, fontSize = 12.sp)
+                            Text(offer.eta, color = TextWhite, fontWeight = FontWeight.Bold)
+                        }
+                    }
                 }
-                Spacer(Modifier.width(12.dp))
-                Column(
-                    verticalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxHeight()
-                ) {
-                    Column {
-                        Text("Pegar", color = TextGray, fontSize = 12.sp)
-                        Text(offer.pickupAddress, color = TextWhite, fontWeight = FontWeight.Bold)
-                        Text(
-                            offer.distanceToPickup + " faltantes",
-                            color = TextGray,
-                            fontSize = 12.sp
+
+                Spacer(Modifier.height(16.dp))
+
+                // Botões
+                Row(Modifier.fillMaxWidth()) {
+                    OutlinedButton(
+                        onClick = onDecline,
+                        modifier = Modifier.weight(1f).height(50.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextWhite)
+                    ) { Text("Recusar") }
+
+                    Spacer(Modifier.width(12.dp))
+
+                    Button(
+                        onClick = onAccept,
+                        modifier = Modifier.weight(1f).height(50.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = TextWhite,
+                            contentColor = Color.Black
                         )
-                    }
-                    Spacer(Modifier.height(16.dp))
-                    Column {
-                        Text("Destino", color = TextGray, fontSize = 12.sp)
-                        Text(
-                            offer.destinationAddress,
-                            color = TextWhite,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                    ) { Text("Aceitar") }
                 }
-            }
-
-            Spacer(Modifier.height(20.dp))
-
-            // Valores lado a lado
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Box(
-                    Modifier.weight(1f).background(Color(0xFF2C2C2C), RoundedCornerShape(8.dp))
-                        .padding(12.dp)
-                ) {
-                    Column {
-                        Text("Valor", color = TextGray, fontSize = 12.sp)
-                        Text(offer.estimatedFare, color = TextWhite, fontWeight = FontWeight.Bold)
-                    }
-                }
-                Box(
-                    Modifier.weight(1f).background(Color(0xFF2C2C2C), RoundedCornerShape(8.dp))
-                        .padding(12.dp)
-                ) {
-                    Column {
-                        Text("Duração", color = TextGray, fontSize = 12.sp)
-                        Text(offer.eta, color = TextWhite, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(16.dp))
-
-            // Botões
-            Row(Modifier.fillMaxWidth()) {
-                OutlinedButton(
-                    onClick = onDecline,
-                    modifier = Modifier.weight(1f).height(50.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = TextWhite)
-                ) { Text("Recusar") }
-
-                Spacer(Modifier.width(12.dp))
-
-                Button(
-                    onClick = onAccept,
-                    modifier = Modifier.weight(1f).height(50.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = TextWhite,
-                        contentColor = Color.Black
-                    )
-                ) { Text("Aceitar") }
             }
         }
     }
@@ -692,7 +739,11 @@ fun ActiveRideBottomPanel(step: HomeStep, viewModel: HomeViewModel) {
 
 
 @Composable
-fun SimulatedMap(driverPosition: Coordinate?, riderPosition: Coordinate?, routePolyline: List<Coordinate>? = null) {
+fun SimulatedMap(
+    driverPosition: Coordinate?,
+    riderPosition: Coordinate?,
+    routePolyline: List<Coordinate>? = null
+) {
     Box(modifier = Modifier.fillMaxSize()) {
         driverPosition?.let { coord ->
             MapViewComponent(
