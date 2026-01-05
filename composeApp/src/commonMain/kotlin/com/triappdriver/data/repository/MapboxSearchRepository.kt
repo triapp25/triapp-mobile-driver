@@ -3,12 +3,12 @@ package com.triappdriver.data.repository
 import com.triappdriver.data.MapboxApiService
 import com.triappdriver.data.dtos.Route
 import com.triappdriver.domain.model.Coordinate
-import dev.icerock.moko.geo.LatLng
+import com.triappdriver.utils.PolylineDecoder
 import kotlinx.coroutines.delay
 
 interface MapboxSearchRepository {
     //suspend fun searchPlaces(query: String): List<SearchResult>
-    suspend fun getRoutePolyline(origin: Coordinate, destination: Coordinate): Route?
+    suspend fun getRoutePolyline(origin: Coordinate, destination: Coordinate): Pair<Route?, List<Coordinate>>?
 
 }
 
@@ -18,7 +18,7 @@ class MapboxSearchRepositoryImpl(
     private val apiKey: String
 ) :MapboxSearchRepository {
 
-    override suspend fun getRoutePolyline(origin: Coordinate, destination: Coordinate): Route? {
+    override suspend fun getRoutePolyline(origin: Coordinate, destination: Coordinate): Pair<Route?, List<Coordinate>>? {
         val coordinates = "${origin.longitude},${origin.latitude};${destination.longitude},${destination.latitude}"
 
         try {
@@ -27,10 +27,10 @@ class MapboxSearchRepositoryImpl(
                 accessToken = apiKey
             )
 
-            return response.routes.firstOrNull()
+            val route = response.routes.firstOrNull()
             //?: return emptyList()
 
-            // return PolylineDecoder.decode(polylineEncoded.geometry, 6)
+            return route to PolylineDecoder.decode(route?.geometry, 6)
 
         } catch (e: Exception) {
             println("Erro ao buscar rota do Mapbox: ${e.message}")

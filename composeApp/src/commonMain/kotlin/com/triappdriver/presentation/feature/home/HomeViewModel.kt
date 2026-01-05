@@ -35,8 +35,6 @@ class HomeViewModel(
     private var firestoreListenerJob: Job? = null
     private var currentTripId: String? = null
 
-    // Job para controlar o rastreamento de métricas em tempo real (ETA/Distância)
-    private var rideMetricsJob: Job? = null
 
     init {
         appPreferences.driverActive(false)
@@ -49,10 +47,34 @@ class HomeViewModel(
             geoLocationTracker.coordinate.collect { loc ->
                 if (loc != null) {
                     println("📍 NOVA loc: $loc")
-                    updateState { s ->
-                        s.copy(
-                            driverPosition = Coordinate(loc.latitude, loc.longitude)
+                    val polyline = state.value.routePolyline
+                    val driverPos = Coordinate(loc.latitude, loc.longitude)
+
+                    if (polyline.isNotEmpty()) {
+                        val metrics = RouteMetricsCalculator.calculate(
+                            polyline = polyline,
+                            currentPosition = driverPos
                         )
+
+                        updateState {
+                            it.copy(
+                                etaMinutes = metrics.etaMinutes,
+                                distanceMeters = metrics.remainingDistanceMeters.toInt(),
+                                routeProgress = metrics.progress,
+                                driverPosition = driverPos
+                            )
+                        }
+
+                        // Chegada automática
+                        if (metrics.remainingDistanceMeters < 1000) {
+                            processIntent(HomeIntent.AlmostArrived)
+                        }
+                    } else {
+                        updateState { s ->
+                            s.copy(
+                                driverPosition = driverPos
+                            )
+                        }
                     }
                 }
             }
@@ -95,7 +117,6 @@ class HomeViewModel(
 
     private fun goOffline() {
         stopFirestoreListener()
-        stopRideMetricsTracking() // NOVO: Para o rastreamento
         appPreferences.driverCurrentTrip("")
         updateState { it.copy(step = Offline, isOnline = false) }
     }
@@ -110,9 +131,6 @@ class HomeViewModel(
 
         // 2. Começa a ouvir o documento da corrida para reagir a mudanças e pegar dados do passageiro
         startFirestoreListener()
-
-        // 3. NOVO: Inicia o rastreamento de métricas em tempo real (ETA/Distância)
-        startRideMetricsTracking()
     }
 
     private fun rejectRide() {
@@ -134,7 +152,9 @@ class HomeViewModel(
                         lat = state.value.driverPosition?.latitude ?: 0.0,
                         lng = state.value.driverPosition?.longitude ?: 0.0,
                         address = state.value.currentDestinationAddress.orEmpty()
-                    )
+                    ),
+                    state.value.etaMinutes,
+                    state.value.distanceMeters
                 )
             } catch (e: Exception) {
                 // Tratar erro de rede (ex: exibir Snackbar)
@@ -163,71 +183,6 @@ class HomeViewModel(
         firestoreListenerJob = null
     }
 
-    // -----------------------------------------------------
-    // MÉTRICAS DE ROTA E RASTREAMENTO (LÓGICA DO MOTORISTA)
-    // -----------------------------------------------------
-
-    /**
-     * Inicia o rastreamento em tempo real da localização do motorista
-     * e calcula a distância/ETA até o ponto de interesse (Pickup ou Dropoff).
-     */
-    private fun startRideMetricsTracking() {
-        rideMetricsJob?.cancel() // Cancela o job anterior
-
-        rideMetricsJob = viewModelScope.launch {
-            // Ouve a localização do motorista em tempo real
-
-            // Determina a coordenada alvo com base no HomeStep atual
-            val targetLatLng: Coordinate? = when (state.value.step) {
-                is HomeStep.NavigatingToPickup -> state.value.pickupCoordinate
-                is HomeStep.InProgress -> state.value.destinationCoordinate
-                else -> null
-            }
-
-            if (targetLatLng != null) {
-                try {
-                    val origin = state.value.driverPosition
-                    val destination = targetLatLng
-
-                    // Calcula a rota (polyline, duração, distância)
-                    // NOTA: mapboxRepository.getRoutePolyline deve ser capaz de receber LatLng
-                    val routeResult = mapboxRepository.getRoutePolyline(origin!!, destination)
-
-                    val distanceMeters = routeResult?.distance?.div(1000)?.toInt() ?: 0
-                    // Duration está em segundos, converter para minutos
-                    val etaMinutes = (routeResult?.duration?.div(60.0))?.toInt() ?: 0
-
-                    // Atualiza o estado da UI com as métricas e a polyline
-                    updateState { s ->
-                        s.copy(
-                            etaMinutes = etaMinutes,
-                            distanceMeters = distanceMeters,
-                        )
-                    }
-
-                    // Lógica de Chegada (Simulação de clique no botão "Chegou")
-                    // Se estiver indo buscar o passageiro e estiver muito perto
-                    if (state.value.step is HomeStep.NavigatingToPickup && distanceMeters < 50) {
-                        processIntent(HomeIntent.ArrivedAtPickup)
-                    }
-
-                } catch (e: Exception) {
-                    println("Erro ao calcular rota: ${e.message}")
-                }
-            } else {
-                // Se não houver alvo válido (ex: Corrida cancelada), para o rastreamento
-                stopRideMetricsTracking()
-            }
-        }
-    }
-
-    private fun stopRideMetricsTracking() {
-        rideMetricsJob?.cancel()
-        rideMetricsJob = null
-        // Limpar métricas no estado
-        updateState { it.copy(etaMinutes = 0, distanceMeters = 0, routePolyline = emptyList()) }
-    }
-
 
     /**
      * Mapeia o estado vindo do Firestore (TaxiState) para o estado da UI (HomeStep)
@@ -241,6 +196,7 @@ class HomeViewModel(
                     val rider: RiderFirebaseDTO = taxiState.rider
 
                     val passengerName = rider.name.orEmpty()
+                    val passengerRating = rider.rating?.toString().orEmpty()
                     val fare = rider.fare.orEmpty()
                     val etaMin = rider.etaMin.orEmpty()
                     val distance = rider.distance.orEmpty()
@@ -255,6 +211,7 @@ class HomeViewModel(
                     updateState {
                         it.copy(
                             currentRiderName = passengerName,
+                            currentRating = passengerRating,
                             currentPickupAddress = pickupAddress,
                             currentDestinationAddress = destinationAddress,
                             currentPassengerNote = rider.rider.note,
@@ -287,6 +244,19 @@ class HomeViewModel(
                 val nextStep = when (status) {
                     "ACCEPTED" -> {
                         // O rastreamento de métricas já foi iniciado em acceptRide()
+                        viewModelScope.launch {
+                            val routeResult = state.value.driverPosition?.let {
+                                mapboxRepository.getRoutePolyline(
+                                    it,
+                                    state.value.pickupCoordinate!!
+                                )
+                            }
+                            val polyline = routeResult?.second.orEmpty()
+                            updateState {
+                                it.copy(routePolyline = polyline, targetCoordinate = state.value.pickupCoordinate)
+                            }
+                        }
+
                         appPreferences.driverCurrentTrip(currentTripId.orEmpty())
                         NavigatingToPickup(
                             passengerName = savedRiderName,
@@ -303,6 +273,19 @@ class HomeViewModel(
                     }
 
                     "ONGOING" -> {
+                        viewModelScope.launch {
+                            val routeResult = state.value.driverPosition?.let {
+                                mapboxRepository.getRoutePolyline(
+                                    it,
+                                    state.value.destinationCoordinate!!
+                                )
+                            }
+                            val polyline = routeResult?.second.orEmpty()
+                            updateState {
+                                it.copy(routePolyline = polyline, targetCoordinate = state.value.destinationCoordinate)
+                            }
+                        }
+
                         InProgress(
                             passengerName = savedRiderName,
                             destinationAddress = savedDestinationAddress,
@@ -323,7 +306,6 @@ class HomeViewModel(
 
             is TaxiState.Completed -> {
                 stopFirestoreListener()
-                stopRideMetricsTracking() // NOVO: Para o rastreamento
 
                 val savedRiderName = state.value.currentRiderName.orEmpty()
 

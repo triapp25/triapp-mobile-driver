@@ -14,9 +14,9 @@ data class RideDriverDTO(
     companion object {
         fun fromMap(map: Map<String, Any>): RideDriverDTO =
             RideDriverDTO(
-                id = map["id"] as? String ?: "",
+                id = map["driverId"] as? String ?: "",
                 name = map["name"] as? String ?: "",
-                carModel = map["carModel"] as? String ?: "",
+                carModel = map["model"] as? String ?: "",
                 rating = map["rating"] as? String ?: "",
                 photoUrl = map["photoUrl"] as? String ?: "",
                 plate = map["plate"] as? String ?: "",

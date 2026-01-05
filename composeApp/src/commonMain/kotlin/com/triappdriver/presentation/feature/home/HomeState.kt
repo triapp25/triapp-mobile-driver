@@ -13,6 +13,7 @@ sealed class HomeIntent : ViewIntent<Nothing> {
 
 
         object ArrivedAtPickup : HomeIntent()
+        object AlmostArrived : HomeIntent()
         object StartRide : HomeIntent()
         object EndRide : HomeIntent()
         object AcceptEarlyRide : HomeIntent()

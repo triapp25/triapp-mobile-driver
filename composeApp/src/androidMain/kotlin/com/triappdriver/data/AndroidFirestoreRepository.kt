@@ -4,6 +4,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.snapshots
 import com.triappdriver.data.dtos.LocationFirebaseDTO
 import com.triappdriver.data.dtos.RideDriverDTO
+import com.triappdriver.data.dtos.RideRiderDTO
 import com.triappdriver.data.dtos.RiderFirebaseDTO
 import com.triappdriver.data.dtos.RiderInfoFirebaseDTO
 import com.triappdriver.data.firestore.FirestoreRepository
@@ -40,7 +41,16 @@ class AndroidFirestoreRepository : FirestoreRepository {
                     null
                 }
 
-                ListenResult(driver, status)
+                val rider = try {
+                    snapshot.get("rider")?.let { raw ->
+                        val json = raw as Map<String, Any>
+                        RideRiderDTO.fromMap(json)
+                    }
+                } catch (e: Exception) {
+                    null
+                }
+
+                ListenResult(driver, rider, status)
             }
     }
 

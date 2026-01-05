@@ -11,3 +11,7 @@ expect fun MapViewComponent(
     routePolyline: List<Coordinate>? = null,
     riderPosition: Coordinate? = null,
 )
+
+expect object PolylineDecoder {
+    fun decode(encodedPolyline: String?, precision: Int): List<Coordinate>
+}

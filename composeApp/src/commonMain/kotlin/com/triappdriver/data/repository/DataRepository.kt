@@ -1,5 +1,6 @@
 package com.triappdriver.data.repository
 
+import androidx.annotation.Discouraged
 import com.triappdriver.data.ApiIngestionService
 import com.triappdriver.data.ApiService
 import com.triappdriver.data.dtos.CardBody
@@ -31,7 +32,12 @@ interface DataRepository {
     suspend fun rideRejected(tripId: String)
     suspend fun rideAccepted(tripId: String, location: LocationDTO)
     suspend fun rideOnGoing(tripId: String, location: LocationDTO)
-    suspend fun rideCompleted(tripId: String, location: LocationDTO)
+    suspend fun rideCompleted(
+        tripId: String,
+        location: LocationDTO,
+        distanceKm: Double,
+        durationMin: Double
+    )
 }
 
 
@@ -121,7 +127,9 @@ class DataRepositoryImpl(
 
     override suspend fun rideCompleted(
         tripId: String,
-        location: LocationDTO
+        location: LocationDTO,
+        distanceKm: Double,
+        durationMin: Double
     ) {
         apiService.rideCompleted(
             tripId,
@@ -129,8 +137,8 @@ class DataRepositoryImpl(
                 tripId = tripId,
                 driverId = authManager.getCurrentUser()?.userId.orEmpty(),
                 dropoffLocation = location,
-                distanceKm = 0.0,
-                durationMin = 0.0,
+                distanceKm = distanceKm,
+                durationMin = durationMin,
             )
         )
     }

@@ -21,7 +21,7 @@ data class HomeDomainModel(
     val driverPosition: Coordinate? = null,
     val destination: String? = null,
     val routeProgress: Float = 0f,
-    val timeRemaining: Int = 0,
+    val currentRating: String? = null,
     val currentRiderName: String? = null,
     val currentDestinationAddress: String? = null,
     val currentPickupAddress: String? = null,
@@ -29,6 +29,7 @@ data class HomeDomainModel(
     val currentFare: String = "R$ 0,00",     // NOVO: para o valor da corrida
     val pickupCoordinate: Coordinate? = null, // NOVO: Coordenadas de pickup
     val destinationCoordinate: Coordinate? = null, // NOVO: Coordenadas de destino
+    val targetCoordinate: Coordinate? = null, // NOVO: Coordenadas de destino
     // Lógica de tempo e distância (Calculados pelo ViewModel/UseCase)
     val etaMinutes: Int = 0, // Minutos restantes
     val distanceMeters: Int = 0, // Distância restante em metros

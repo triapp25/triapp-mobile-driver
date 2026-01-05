@@ -1,12 +1,14 @@
 package com.triappdriver.data.firestore
 
 import com.triappdriver.data.dtos.RideDriverDTO
+import com.triappdriver.data.dtos.RideRiderDTO
 import com.triappdriver.data.dtos.RiderFirebaseDTO
 import com.triappdriver.utils.FirebaseAuthManager
 import kotlinx.coroutines.flow.Flow
 
 data class ListenResult(
     val driver: RideDriverDTO?,
+    val rider: RideRiderDTO?,
     val status: String
 )
 

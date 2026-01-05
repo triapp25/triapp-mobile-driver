@@ -5,7 +5,6 @@ import com.triappdriver.data.firestore.FirestoreRepository
 import com.triappdriver.data.firestore.listenDocumentUntilDone
 import com.triappdriver.data.firestore.listenOnline
 import com.triappdriver.data.repository.DataRepository
-import com.triappdriver.domain.model.ProductDomainModel
 import com.triappdriver.domain.model.TaxiState
 import com.triappdriver.utils.FirebaseAuthManager
 import com.triappdriver.utils.getCrashlyticsService
@@ -27,7 +26,7 @@ class TaxiUseCase(
         )
             .catch { e -> emit(TaxiState.Error(e.message ?: "Erro desconhecido")) }
             .collect { result ->
-                emit(TaxiState.Update(result.driver, result.status))
+                emit(TaxiState.Update(result.driver, result.rider, result.status))
 
                 if (result.status == "COMPLETED") {
                     emit(TaxiState.Completed)
@@ -36,10 +35,16 @@ class TaxiUseCase(
     }
 
     // 2. Funções para o Motorista alterar o status no Firestore
-    suspend fun updateTripStatus(tripId: String, newStatus: String, location: LocationDTO?) {
+    suspend fun updateTripStatus(
+        tripId: String,
+        newStatus: String,
+        location: LocationDTO?,
+        etaMinutes: Int,
+        distanceMeters: Int
+    ) {
         try {
             if (newStatus == "COMPLETED") {
-                dataRepository.rideCompleted(tripId, location!!)
+                dataRepository.rideCompleted(tripId, location!!, etaMinutes.toDouble(), distanceMeters.toDouble())
             } else if (newStatus == "ACCEPTED") {
                 dataRepository.rideAccepted(tripId, location!!)
             } else if (newStatus == "REJECTED") {

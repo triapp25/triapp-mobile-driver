@@ -81,10 +81,10 @@ fun DriverHomeScreen(
 
     LaunchedEffect(uiState.step) {
         // Controla se o sheet está visível (RideOffer) ou expandido (Ativo/Offline)
-        if (uiState.step is HomeStep.RideOffer) {
-            scaffoldState.bottomSheetState.partialExpand()
-        } else {
+        if (uiState.step is HomeStep.OnlineSearching) {
             scaffoldState.bottomSheetState.expand()
+        } else {
+            scaffoldState.bottomSheetState.partialExpand()
         }
     }
 
@@ -154,7 +154,7 @@ fun DriverHomeScreen(
                     // 1. MAPA (Camada de Fundo)
                     SimulatedMap(
                         driverPosition = uiState.driverPosition,
-                        riderPosition = uiState.pickupCoordinate,
+                        riderPosition = uiState.targetCoordinate,
                         routePolyline = uiState.routePolyline
                     )
 
@@ -165,9 +165,8 @@ fun DriverHomeScreen(
                             if (isOnline) viewModel.processIntent(HomeIntent.GoOnline)
                             else viewModel.processIntent(HomeIntent.GoOffline)
                         },
-                        onMenuClick = {
-                            scope.launch { drawerState.open() }
-                        },
+                        onMenuClick = { scope.launch { drawerState.open() } },
+                        showMenuIcon = uiState.targetCoordinate == null, // controle a visibilidade aqui
                         modifier = Modifier
                             .align(Alignment.TopCenter)
                             .statusBarsPadding()
@@ -205,6 +204,7 @@ fun HomeTopBar(
     isOnline: Boolean,
     onToggle: (Boolean) -> Unit,
     onMenuClick: () -> Unit,
+    showMenuIcon: Boolean = true, // novo parâmetro
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -214,16 +214,20 @@ fun HomeTopBar(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Botão Menu
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(DarkCardColor.copy(alpha = 0.95f))
-                .clickable { onMenuClick() },
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(Icons.Default.Menu, contentDescription = "Menu", tint = TextWhite)
+        // Botão Menu, só se showMenuIcon for true
+        if (showMenuIcon) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(DarkCardColor.copy(alpha = 0.95f))
+                    .clickable { onMenuClick() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.Menu, contentDescription = "Menu", tint = TextWhite)
+            }
+        } else {
+            Spacer(modifier = Modifier.width(48.dp)) // mantém alinhamento
         }
 
         // Switch Online/Offline
@@ -550,7 +554,7 @@ fun ActiveRideBottomPanel(step: HomeStep, viewModel: HomeViewModel) {
     } else {
         "Calculando..."
     }
-    val timeText = if (etaMinutes > 0) "$etaMinutes min" else "Calculando..."
+    val timeText = if (etaMinutes > 0) "$etaMinutes min" else ""
 
 
     // Lógica do Step e Ações
@@ -599,12 +603,6 @@ fun ActiveRideBottomPanel(step: HomeStep, viewModel: HomeViewModel) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)
     ) {
-        // Drag Handle
-        Box(
-            modifier = Modifier.width(40.dp).height(4.dp).background(Color.Gray, CircleShape)
-                .align(Alignment.CenterHorizontally)
-        )
-        Spacer(Modifier.height(20.dp))
 
         // Status Card flutuante (Com ETA e Distância dinâmicos)
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -638,7 +636,7 @@ fun ActiveRideBottomPanel(step: HomeStep, viewModel: HomeViewModel) {
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp
                     )
-                    Text("${uiState.rating} ★", color = TextGray)
+                    Text("${uiState.currentRating} ★", color = TextGray)
                 }
             }
         }
@@ -700,21 +698,6 @@ fun ActiveRideBottomPanel(step: HomeStep, viewModel: HomeViewModel) {
             }
         }
 
-        Spacer(Modifier.height(20.dp))
-
-        // Fare (Apenas se showFare for true)
-        if (showFare) {
-            Card(colors = CardDefaults.cardColors(containerColor = TextWhite)) {
-                Row(
-                    Modifier.padding(16.dp).fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text("Ganho da corrida", color = Color.Black)
-                    Text(fare, color = Color.Black, fontWeight = FontWeight.Bold)
-                }
-            }
-        }
-        // Garante espaço mesmo sem o card do Fare
         Spacer(Modifier.height(12.dp))
 
 

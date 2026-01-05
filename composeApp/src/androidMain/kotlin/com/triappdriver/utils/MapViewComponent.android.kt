@@ -1,7 +1,20 @@
 package com.triappdriver.utils
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Navigation
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.mapbox.geojson.Point
 import com.mapbox.geojson.utils.PolylineUtils // Necessário para a decodificação da polyline
@@ -58,157 +71,229 @@ actual fun MapViewComponent(
     routePolyline: List<Coordinate>?, // Rota completa (motorista -> coleta -> destino)
     riderPosition: Coordinate?, // Posição atual do usuário
 ) {
-    AndroidView(
-        factory = { context ->
-            val mapView = MapView(context)
 
-            // Configuração inicial e criação dos gerenciadores (rodando apenas uma vez)
-            mapView.mapboxMap.loadStyle(Style.STANDARD) { _ ->
-                val annotationPlugin = mapView.annotations
+    val context = LocalContext.current
 
-                val userManager = annotationPlugin.createCircleAnnotationManager()
-                val driverManager = annotationPlugin.createCircleAnnotationManager()
-                val polylineManager = annotationPlugin.createPolylineAnnotationManager()
 
-                mapView.tag = MapMarkersManager(userManager, driverManager, polylineManager)
+    Box(modifier = modifier) {
 
-                // Câmera inicial no usuário
-                mapView.mapboxMap.setCamera(
-                    CameraOptions.Builder()
-                        .center(Point.fromLngLat(coordinate.longitude, coordinate.latitude))
-                        .zoom(15.0)
-                        .build()
-                )
-            }
-            mapView
-        },
-        modifier = modifier,
-        update = { mapView ->
-            val userPoint = Point.fromLngLat(coordinate.longitude, coordinate.latitude)
-            val markers = mapView.tag as? MapMarkersManager ?: return@AndroidView
+        AndroidView(
+            factory = { context ->
+                val mapView = MapView(context)
 
-            // Variável para coletar os pontos que a câmera precisa enquadrar
-            val pointsToIncludeInCamera = mutableListOf(userPoint)
-            val FOCUS_THRESHOLD_METERS = 2000.0
+                // Configuração inicial e criação dos gerenciadores (rodando apenas uma vez)
+                mapView.mapboxMap.loadStyle(Style.STANDARD) { _ ->
+                    val annotationPlugin = mapView.annotations
 
-            // ----------------------------------------------------
-            // 1. ATUALIZAÇÃO DA POLYLINE
-            // ----------------------------------------------------
-            markers.polylineManager.deleteAll()
-            routePolyline?.let { poly ->
-                if (poly.isNotEmpty()) {
-                    val polylinePoints = poly.map { Point.fromLngLat(it.latitude, it.longitude) }
+                    val userManager = annotationPlugin.createCircleAnnotationManager()
+                    val driverManager = annotationPlugin.createCircleAnnotationManager()
+                    val polylineManager = annotationPlugin.createPolylineAnnotationManager()
 
-                    val polylineOptions = PolylineAnnotationOptions()
-                        .withPoints(polylinePoints)
-                        .withLineWidth(6.0)
-                        .withLineColor("#007AFF")
+                    mapView.tag = MapMarkersManager(userManager, driverManager, polylineManager)
 
-                    markers.polylineManager.create(polylineOptions)
-                }
-            }
-
-            // ----------------------------------------------------
-            // 2. CÁLCULO DINÂMICO DA CÂMERA
-            // ----------------------------------------------------
-
-            var distanceToDriver = Double.MAX_VALUE
-            if (riderPosition != null) {
-                val driverPoint = Point.fromLngLat(riderPosition.longitude, riderPosition.latitude)
-                pointsToIncludeInCamera.add(driverPoint)
-
-                distanceToDriver = calculateDistance(
-                    coordinate.latitude, coordinate.longitude,
-                    riderPosition.latitude, riderPosition.longitude
-                )
-            }
-
-            val isDriverActive = riderPosition != null
-            val isDriverApproaching = isDriverActive && distanceToDriver <= FOCUS_THRESHOLD_METERS
-            val isRouteAvailable = routePolyline?.isNotEmpty() == true
-
-            val cameraOptions = when {
-                isDriverActive && isDriverApproaching -> {
-                    // MODO 2 (Prioridade MÁXIMA): FOCO NO PICKUP (Motorista Perto do Usuário)
-                    // Força o zoom-in no Usuário e no Driver.
-
-                    val focusPoints = listOfNotNull(userPoint, riderPosition.let { c -> Point.fromLngLat(c.longitude, c.latitude) })
-
-                    mapView.mapboxMap.cameraForCoordinates(
-                        focusPoints,
-                        EdgeInsets(200.0, 200.0, 200.0, 200.0), // Padding MAIOR para zoom
-                        null,
-                        null
+                    // Câmera inicial no usuário
+                    mapView.mapboxMap.setCamera(
+                        CameraOptions.Builder()
+                            .center(Point.fromLngLat(coordinate.longitude, coordinate.latitude))
+                            .zoom(15.0)
+                            .build()
                     )
                 }
-                isRouteAvailable -> {
-                    // MODO 1: VISÃO GERAL (Rota Ativa, Zoom Out para mostrar o trajeto completo)
+                mapView
+            },
+            modifier = modifier,
+            update = { mapView ->
+                val userPoint = Point.fromLngLat(coordinate.longitude, coordinate.latitude)
+                val markers = mapView.tag as? MapMarkersManager ?: return@AndroidView
 
-                    val allPointsForBounds = pointsToIncludeInCamera.filterNotNull().toMutableList()
+                // Variável para coletar os pontos que a câmera precisa enquadrar
+                val pointsToIncludeInCamera = mutableListOf(userPoint)
+                val FOCUS_THRESHOLD_METERS = 2000.0
 
-                    // Adiciona o destino final
-                    routePolyline!!.lastOrNull()?.let { lastPoint ->
-                        allPointsForBounds.add(Point.fromLngLat(lastPoint.latitude, lastPoint.longitude))
+                // ----------------------------------------------------
+                // 1. ATUALIZAÇÃO DA POLYLINE
+                // ----------------------------------------------------
+                markers.polylineManager.deleteAll()
+                routePolyline?.let { poly ->
+                    if (poly.isNotEmpty()) {
+                        val polylinePoints =
+                            poly.map { Point.fromLngLat(it.longitude, it.latitude) }
+
+                        val polylineOptions = PolylineAnnotationOptions()
+                            .withPoints(polylinePoints)
+                            .withLineWidth(6.0)
+                            .withLineColor("#007AFF")
+
+                        markers.polylineManager.create(polylineOptions)
+                    }
+                }
+
+                // ----------------------------------------------------
+                // 2. CÁLCULO DINÂMICO DA CÂMERA
+                // ----------------------------------------------------
+
+                var distanceToDriver = Double.MAX_VALUE
+                if (riderPosition != null) {
+                    val driverPoint =
+                        Point.fromLngLat(riderPosition.longitude, riderPosition.latitude)
+                    pointsToIncludeInCamera.add(driverPoint)
+
+                    distanceToDriver = calculateDistance(
+                        coordinate.latitude, coordinate.longitude,
+                        riderPosition.latitude, riderPosition.longitude
+                    )
+                }
+
+                val isDriverActive = riderPosition != null
+                val isDriverApproaching =
+                    isDriverActive && distanceToDriver <= FOCUS_THRESHOLD_METERS
+                val isRouteAvailable = routePolyline?.isNotEmpty() == true
+
+                val cameraOptions = when {
+                    isDriverActive && isDriverApproaching -> {
+                        // MODO 2 (Prioridade MÁXIMA): FOCO NO PICKUP (Motorista Perto do Usuário)
+                        // Força o zoom-in no Usuário e no Driver.
+
+                        val focusPoints = listOfNotNull(
+                            userPoint,
+                            riderPosition.let { c -> Point.fromLngLat(c.longitude, c.latitude) })
+
+                        mapView.mapboxMap.cameraForCoordinates(
+                            focusPoints,
+                            EdgeInsets(200.0, 200.0, 200.0, 200.0), // Padding MAIOR para zoom
+                            null,
+                            null
+                        )
                     }
 
-                    // Enquadra a rota completa
-                    mapView.mapboxMap.cameraForCoordinates(
-                        allPointsForBounds.distinct(),
-                        EdgeInsets(100.0, 100.0, 100.0, 100.0), // Padding normal
-                        null,
-                        null
-                    )
+                    isRouteAvailable -> {
+                        // MODO 1: VISÃO GERAL (Rota Ativa, Zoom Out para mostrar o trajeto completo)
+
+                        val allPointsForBounds =
+                            pointsToIncludeInCamera.filterNotNull().toMutableList()
+
+                        // Adiciona o destino final
+                        routePolyline!!.lastOrNull()?.let { lastPoint ->
+                            allPointsForBounds.add(
+                                Point.fromLngLat(
+                                    lastPoint.longitude,
+                                    lastPoint.latitude
+                                )
+                            )
+                        }
+
+                        // Enquadra a rota completa
+                        mapView.mapboxMap.cameraForCoordinates(
+                            allPointsForBounds.distinct(),
+                            EdgeInsets(100.0, 100.0, 100.0, 100.0), // Padding normal
+                            null,
+                            null
+                        )
+                    }
+
+                    isDriverActive -> {
+                        // MODO 3: ACOMPANHAMENTO DO MOTORISTA (Se a rota sumir, mas o motorista ainda estiver lá)
+
+                        CameraOptions.Builder()
+                            .center(
+                                Point.fromLngLat(
+                                    riderPosition!!.longitude,
+                                    riderPosition.latitude
+                                )
+                            )
+                            .zoom(15.0)
+                            .build()
+
+                    }
+
+                    else -> {
+                        // MODO PADRÃO (Início ou Fim)
+                        CameraOptions.Builder()
+                            .center(userPoint)
+                            .zoom(15.0)
+                            .build()
+                    }
                 }
-                isDriverActive -> {
-                    // MODO 3: ACOMPANHAMENTO DO MOTORISTA (Se a rota sumir, mas o motorista ainda estiver lá)
 
-                    CameraOptions.Builder()
-                        .center(Point.fromLngLat(riderPosition!!.longitude, riderPosition.latitude))
-                        .zoom(15.0)
-                        .build()
+                // 3. MOVER A CÂMERA SUAVEMENTE
+                mapView.getMapboxMap().easeTo(
+                    cameraOptions,
+                    MapAnimationOptions.mapAnimationOptions { duration(1000) }
+                )
 
-                }
-                else -> {
-                    // MODO PADRÃO (Início ou Fim)
-                    CameraOptions.Builder()
-                        .center(userPoint)
-                        .zoom(15.0)
-                        .build()
-                }
-            }
+                // 4. ATUALIZAÇÃO DOS MARCADORES (Usuário e Motorista)
 
-            // 3. MOVER A CÂMERA SUAVEMENTE
-            mapView.getMapboxMap().easeTo(
-                cameraOptions,
-                MapAnimationOptions.mapAnimationOptions { duration(1000) }
-            )
-
-            // 4. ATUALIZAÇÃO DOS MARCADORES (Usuário e Motorista)
-
-            // Marcardor do Usuário
-            markers.userManager.deleteAll()
-            val userCircle = CircleAnnotationOptions()
-                .withPoint(userPoint)
-                .withCircleRadius(8.0)
-                .withCircleColor("#34C759")
-                .withCircleStrokeWidth(2.0)
-                .withCircleStrokeColor("#FFFFFF")
-            markers.userManager.create(userCircle)
-
-            // Marcador do Motorista
-            markers.driverManager.deleteAll()
-            if (riderPosition != null) {
-                val driverPoint = Point.fromLngLat(riderPosition.longitude, riderPosition.latitude)
-
-                val driverCircle = CircleAnnotationOptions()
-                    .withPoint(driverPoint)
-                    .withCircleRadius(10.0)
-                    .withCircleColor("#000000")
+                // Marcardor do Usuário
+                markers.userManager.deleteAll()
+                val userCircle = CircleAnnotationOptions()
+                    .withPoint(userPoint)
+                    .withCircleRadius(8.0)
+                    .withCircleColor("#34C759")
                     .withCircleStrokeWidth(2.0)
                     .withCircleStrokeColor("#FFFFFF")
+                markers.userManager.create(userCircle)
 
-                markers.driverManager.create(driverCircle)
+                // Marcador do Motorista
+                markers.driverManager.deleteAll()
+                if (riderPosition != null) {
+                    val driverPoint =
+                        Point.fromLngLat(riderPosition.longitude, riderPosition.latitude)
+
+                    val driverCircle = CircleAnnotationOptions()
+                        .withPoint(driverPoint)
+                        .withCircleRadius(10.0)
+                        .withCircleColor("#000000")
+                        .withCircleStrokeWidth(2.0)
+                        .withCircleStrokeColor("#FFFFFF")
+
+                    markers.driverManager.create(driverCircle)
+                }
+            }
+        )
+
+        if (riderPosition != null) {
+            FloatingActionButton(
+                onClick = {
+                    openNavigation(
+                        context = context,
+                        latitude = riderPosition.latitude,
+                        longitude = riderPosition.longitude
+                    )
+                },
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(16.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Navigation,
+                    contentDescription = "Navegar"
+                )
             }
         }
+    }
+}
+
+fun openNavigation(
+    context: Context,
+    latitude: Double,
+    longitude: Double
+) {
+    val uri = Uri.parse("google.navigation:q=$latitude,$longitude")
+    val intent = Intent(Intent.ACTION_VIEW, uri)
+    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+    context.startActivity(
+        Intent.createChooser(intent, "Abrir navegação com")
     )
+}
+
+actual object PolylineDecoder {
+    actual fun decode(encodedPolyline: String?, precision: Int): List<Coordinate> {
+
+        val mapboxPoints: List<Point> = PolylineUtils.decode(encodedPolyline.toString(), precision)
+
+        return mapboxPoints.map { point ->
+            Coordinate(point.latitude(), point.longitude())
+        }
+    }
 }
