@@ -5,10 +5,13 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Email
@@ -34,6 +37,7 @@ import androidx.compose.ui.unit.sp
 import com.triappdriver.BackHandler
 import com.triappdriver.TriColors
 import com.triappdriver.domain.model.SignUpDomainModel
+import com.triappdriver.domain.model.UploadStatus
 import com.triappdriver.presentation.feature.login.AppButton
 import com.triappdriver.presentation.feature.login.AppLogo
 import com.triappdriver.presentation.feature.login.AppTextField
@@ -119,6 +123,7 @@ fun SignupFlowScreen(
         ) { step ->
             Column(
                 modifier = Modifier
+                    .verticalScroll(rememberScrollState())
                     .fillMaxSize()
                     .padding(24.dp)
             ) {
@@ -126,6 +131,7 @@ fun SignupFlowScreen(
                     SignupStep.PersonalInfo -> StepPersonalInfo(uiState, onAction)
                     SignupStep.Car -> StepCar(uiState, onAction)
                     SignupStep.Documents -> StepDocuments(
+                        state = uiState,
                         onUploadProfile = { path -> onAction(UploadProfilePhoto(path)) },
                         onUploadId = { path -> onAction(UploadIdDocument(path)) }
                     )
@@ -401,77 +407,117 @@ fun StepCar(uiState: SignUpDomainModel, onAction: (SignupIntent) -> Unit) {
 
 @Composable
 fun StepDocuments(
-    onUploadProfile: (String) -> Unit,
-    onUploadId: (String) -> Unit
+    state: SignUpDomainModel,
+    onUploadProfile: (PlatformFile) -> Unit,
+    onUploadId: (PlatformFile) -> Unit
 ) {
-    var selectedFileProfileFirst by remember { mutableStateOf<PlatformFile?>(null) }
-    var selectedFileProfileSecond by remember { mutableStateOf<PlatformFile?>(null) }
-    var selectedFileIdFirst by remember { mutableStateOf<PlatformFile?>(null) }
-    var selectedFileIdSecond by remember { mutableStateOf<PlatformFile?>(null) }
-
-    var uploadStatusFirst by remember { mutableStateOf("") }
-    var uploadStatusSecond by remember { mutableStateOf("") }
-
-    val pickerLauncherFirst = rememberFilePickerLauncher { file ->
-        selectedFileProfileFirst = file
-        selectedFileProfileFirst?.let { onUploadProfile(it.name) }
-        uploadStatusFirst =
-            if (selectedFileProfileFirst != null) "Arquivo selecionado: ${selectedFileProfileFirst?.name}" else "Nenhum arquivo selecionado"
+    val profilePicker = rememberFilePickerLauncher { file ->
+        file?.let(onUploadProfile)
     }
 
-    val pickerLauncherSecond = rememberFilePickerLauncher { file ->
-        selectedFileIdSecond = file
-        selectedFileIdSecond?.let { onUploadId(it.name) }
-        uploadStatusSecond =
-            if (selectedFileIdSecond != null) "Arquivo selecionado: ${selectedFileIdSecond?.name}" else "Nenhum arquivo selecionado"
+    val idPicker = rememberFilePickerLauncher { file ->
+        file?.let(onUploadId)
     }
 
     Column {
-        Text("Verificação de Documento", color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
-        Text(
-            "Verificação de identidade para segurança adicional",
-            color = MaterialTheme.colorScheme.primary,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold
+        Header()
+
+        DocumentSection(
+            title = "Foto de perfil",
+            subtitle = "Uma foto clara do seu rosto",
+            uploadStatus = state.profileUploadStatus,
+            fileName = state.profilePhotoUrl?.substringAfterLast("/"),
+            onClick = {
+                if (state.profileUploadStatus != UploadStatus.UPLOADING)
+                    profilePicker.launch()
+            }
         )
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Text("Foto do Perfil", color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
-        Text(
-            "Foto clara do seu rosto",
-            color = MaterialTheme.colorScheme.secondary,
-            fontSize = 12.sp
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-
-        DocumentUploadCard(title = "Deixe sua foto aqui ou procure") {
-            pickerLauncherFirst.launch()
-        }
-
-        if (uploadStatusFirst.isNotBlank()) {
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(uploadStatusFirst, color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
-        }
-
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Text("", color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
-        Text(
-            "Documento oficial com foto (RG, CNH, Passaporte)",
-            color = MaterialTheme.colorScheme.secondary,
-            fontSize = 12.sp
+        DocumentSection(
+            title = "Documento de identificação",
+            subtitle = "Documento oficial com foto ou passaporte",
+            uploadStatus = state.documentUploadStatus,
+            fileName = state.idDocumentUrl?.substringAfterLast("/"),
+            onClick = {
+                if (state.documentUploadStatus != UploadStatus.UPLOADING)
+                    idPicker.launch()
+            }
         )
-        Spacer(modifier = Modifier.height(8.dp))
+    }
+}
 
-        DocumentUploadCard(title = "Deixe sua foto aqui ou procure") {
-            pickerLauncherSecond.launch()
-        }
+@Composable
+private fun Header() {
+    Text("Verificação de documentos", color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
+    Text(
+        "Confirme sua identidade",
+        color = MaterialTheme.colorScheme.primary,
+        fontSize = 24.sp,
+        fontWeight = FontWeight.Bold
+    )
+    Spacer(modifier = Modifier.height(32.dp))
+}
 
-        if (uploadStatusSecond.isNotBlank()) {
+@Composable
+private fun DocumentSection(
+    title: String,
+    subtitle: String,
+    uploadStatus: UploadStatus,
+    fileName: String?,
+    onClick: () -> Unit
+) {
+    Text(title, color = MaterialTheme.colorScheme.secondary, fontSize = 14.sp)
+    Text(subtitle, color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
+    Spacer(modifier = Modifier.height(8.dp))
+
+    DocumentUploadCard(
+        title = when (uploadStatus) {
+            UploadStatus.IDLE -> "Solte seu arquivo aqui ou procure"
+            UploadStatus.UPLOADING -> "Enviando arquivo..."
+            UploadStatus.SUCCESS -> "Arquivo enviado"
+            UploadStatus.ERROR -> "Erro ao enviar"
+        },
+        onClick = onClick
+    )
+
+    UploadStatusView(
+        uploadStatus = uploadStatus,
+        fileName = fileName
+    )
+}
+
+@Composable
+private fun UploadStatusView(
+    uploadStatus: UploadStatus,
+    fileName: String?
+) {
+    when (uploadStatus) {
+        UploadStatus.SUCCESS -> {
             Spacer(modifier = Modifier.height(12.dp))
-            Text(uploadStatusSecond, color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
+            Text(
+                "Arquivo: ${fileName ?: "enviado com sucesso"}",
+                color = MaterialTheme.colorScheme.secondary,
+                fontSize = 12.sp
+            )
         }
+
+        UploadStatus.ERROR -> {
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                "Falha no upload. Tente novamente.",
+                color = MaterialTheme.colorScheme.error,
+                fontSize = 12.sp
+            )
+        }
+
+        UploadStatus.UPLOADING -> {
+            Spacer(modifier = Modifier.height(12.dp))
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        }
+
+        UploadStatus.IDLE -> Unit
     }
 }
 

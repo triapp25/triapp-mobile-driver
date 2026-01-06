@@ -3,6 +3,7 @@ package com.triappdriver.presentation.feature.signup
 import com.triappdriver.domain.model.SignUpDomainModel
 import com.triappdriver.presentation.SideEffect
 import com.triappdriver.presentation.ViewIntent
+import io.github.vinceglb.filekit.core.PlatformFile
 
 sealed class SignupEffect : SideEffect<Nothing> {
     data class RegisterSuccess(val user: SignUpDomainModel) : SignupEffect()
@@ -18,8 +19,8 @@ sealed class SignupIntent : ViewIntent<Nothing> {
     data class EnterValidate(val date: String) : SignupIntent()
     data class VerifyCode(val code: String) : SignupIntent()
     data class SendResetCode(val activity: Any?) : SignupIntent()
-    data class UploadProfilePhoto(val path: String) : SignupIntent()
-    data class UploadIdDocument(val path: String) : SignupIntent()
+    data class UploadProfilePhoto(val file: PlatformFile) : SignupIntent()
+    data class UploadIdDocument(val file: PlatformFile) : SignupIntent()
     object NextStep : SignupIntent()
     object PreviousStep : SignupIntent()
 }

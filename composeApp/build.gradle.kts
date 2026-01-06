@@ -181,6 +181,7 @@ dependencies {
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.messaging)
     implementation(libs.firebase.crashlyticsKtx)
+    implementation(libs.firebase.storage.ktx)
 
     debugImplementation(compose.uiTooling)
 

@@ -12,8 +12,20 @@ data class SignUpDomainModel(
     val placa: String = "",
     val insurance: String = "",
     val validate: String = "",
-    val profilePhotoPath: String? = null,
-    val idDocumentPath: String? = null,
+    val profilePhotoUrl: String? = null,
+    val idDocumentUrl: String? = null,
+
+    val profileUploadStatus: UploadStatus = UploadStatus.IDLE,
+    val documentUploadStatus: UploadStatus = UploadStatus.IDLE,
+
     val isCompleted: Boolean = false,
     val canContinue: Boolean = false
 ): ViewState<SignUpDomainModel>
+
+
+enum class UploadStatus {
+    IDLE,
+    UPLOADING,
+    SUCCESS,
+    ERROR
+}

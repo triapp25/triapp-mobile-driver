@@ -8,6 +8,8 @@ import androidx.room.RoomDatabase
 import com.russhwolf.settings.ObservableSettings
 import com.triappdriver.data.AndroidFirestoreRepository
 import com.triappdriver.data.firestore.FirestoreRepository
+import com.triappdriver.data.repository.FileUploadRepository
+import com.triappdriver.data.repository.FirebaseFileUploadRepository
 import com.triappdriver.local.AppDatabase
 import com.triappdriver.local.provideObservableSettings
 import dev.icerock.moko.permissions.PermissionsController
@@ -41,4 +43,7 @@ val androidModule = module {
 
     single<FirestoreRepository> { AndroidFirestoreRepository() }
 
+    single<FileUploadRepository> {
+        FirebaseFileUploadRepository(androidContext())
+    }
 }

@@ -2,6 +2,7 @@ package com.triappdriver.di
 
 import com.russhwolf.settings.Settings
 import com.triappdriver.data.ApiIngestionService
+import com.triappdriver.data.ApiProfileService
 import com.triappdriver.data.ApiService
 import com.triappdriver.data.LocationSender
 import com.triappdriver.data.MapboxApiService
@@ -9,6 +10,8 @@ import com.triappdriver.data.repository.DataRepository
 import com.triappdriver.data.repository.DataRepositoryImpl
 import com.triappdriver.data.repository.MapboxSearchRepository
 import com.triappdriver.data.repository.MapboxSearchRepositoryImpl
+import com.triappdriver.data.repository.ProfileRepository
+import com.triappdriver.data.repository.ProfileRepositoryImpl
 import com.triappdriver.data.repository.RatingRepository
 import com.triappdriver.data.repository.RatingRepositoryImpl
 import com.triappdriver.data.repository.RideRepository
@@ -58,6 +61,7 @@ expect fun getPlatformHttpClientEngineFactory(): HttpClientEngineFactory<*>
 private val KtorfitDefault = named("ktorfitDefault")
 private val KtorfitIngestion = named("KtorfitIngestion")
 private val KtorfitMapbox = named("ktorfitMapbox")
+private val KtorfitProfile = named("KtorfitProfile")
 
 val networkModule = module {
 
@@ -115,12 +119,41 @@ val networkModule = module {
         }
     }
 
+    single(KtorfitProfile) {
+        //val config: TenantConfig = get<TenantConfig>()
+        HttpClient(engineFactory = get<HttpClientEngineFactory<*>>()) {
+            install(ContentNegotiation) {
+                json(
+                    Json {
+                        ignoreUnknownKeys = true
+                        encodeDefaults = true
+                        prettyPrint = false
+                    }
+                )
+            }
+            // Optional but recommended:
+            defaultRequest {
+                url("https://triapp-profiles-6967168117.us-east1.run.app")
+                contentType(ContentType.Application.Json)
+                accept(ContentType.Application.Json)
+            }
+        }
+    }
+
     // Builder Ktorfit
     single {
         Ktorfit.Builder()
             .httpClient(get<HttpClient>())
             .build()
     }
+
+
+    single(KtorfitProfile) {
+        Ktorfit.Builder()
+            .httpClient(get<HttpClient>(KtorfitProfile))
+            .build()
+    }
+
 
     single(KtorfitIngestion) {
         Ktorfit.Builder()
@@ -140,6 +173,11 @@ val networkModule = module {
     }
 
     single<ApiService> { get<Ktorfit>().create() }
+
+
+    single<ApiProfileService>(KtorfitProfile) {
+        get<Ktorfit>(KtorfitProfile).create()
+    }
 
     single<ApiIngestionService>(KtorfitIngestion) {
         get<Ktorfit>(KtorfitIngestion).create()
@@ -182,6 +220,9 @@ val repositoryModule = module {
         )
     }
 
+    single<ProfileRepository> { ProfileRepositoryImpl(get(KtorfitProfile), get()) }
+
+
 }
 
 val domainModule = module {
@@ -198,7 +239,7 @@ val domainModule = module {
 }
 
 val presentationModule = module {
-    viewModel { SignupViewModel(get()) }
+    viewModel { SignupViewModel(get(), get(), get()) }
     viewModel { LoginViewModel(get()) }
     viewModel { HomeViewModel(get(), get(), get(), get(), get()) }
     viewModel { ProfileViewModel(get(), get(), get(), get()) }

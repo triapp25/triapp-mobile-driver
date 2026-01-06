@@ -1,12 +1,18 @@
 package com.triappdriver.presentation.feature.signup
 
 import androidx.lifecycle.viewModelScope
+import com.triappdriver.data.repository.FileUploadRepository
+import com.triappdriver.data.repository.ProfileRepository
+import com.triappdriver.domain.model.UploadStatus
 import com.triappdriver.domain.model.SignUpDomainModel as DomainSignUpModel
 import com.triappdriver.presentation.BaseViewModel
 import com.triappdriver.utils.FirebaseAuthManager
+import io.github.vinceglb.filekit.core.PlatformFile
 import kotlinx.coroutines.launch
 
 class SignupViewModel(
+    private val uploadRepository: FileUploadRepository,
+    private val repository: ProfileRepository,
     private val firebaseManager: FirebaseAuthManager
 ) : BaseViewModel<DomainSignUpModel, SignupIntent, SignupEffect>(
     initialState = DomainSignUpModel()
@@ -19,8 +25,53 @@ class SignupViewModel(
             is SignupIntent.EnterInsurance -> updateAndValidate { it.copy(insurance = intent.insurance) }
             is SignupIntent.EnterPlaca -> updateAndValidate { it.copy(placa = intent.placa) }
             is SignupIntent.EnterValidate -> updateAndValidate { it.copy(validate = intent.date) }
-            is SignupIntent.UploadProfilePhoto -> updateAndValidate { it.copy(profilePhotoPath = intent.path) }
-            is SignupIntent.UploadIdDocument -> updateAndValidate { it.copy(idDocumentPath = intent.path) }
+            is SignupIntent.UploadProfilePhoto -> {
+                updateState {
+                    it.copy(profileUploadStatus = UploadStatus.UPLOADING)
+                }
+
+                uploadFile(
+                    file = intent.file,
+                    onSuccess = { url ->
+                        updateAndValidate {
+                            it.copy(
+                                profilePhotoUrl = url,
+                                profileUploadStatus = UploadStatus.SUCCESS
+                            )
+                        }
+                    },
+                    onError = {
+                        updateState {
+                            it.copy(profileUploadStatus = UploadStatus.ERROR)
+                        }
+                        sendEffect(SignupEffect.ShowError("Erro ao enviar foto de perfil"))
+                    }
+                )
+            }
+
+            is SignupIntent.UploadIdDocument -> {
+                updateState {
+                    it.copy(documentUploadStatus = UploadStatus.UPLOADING)
+                }
+
+                uploadFile(
+                    file = intent.file,
+                    onSuccess = { url ->
+                        updateAndValidate {
+                            it.copy(
+                                idDocumentUrl = url,
+                                documentUploadStatus = UploadStatus.SUCCESS
+                            )
+                        }
+                    },
+                    onError = {
+                        updateState {
+                            it.copy(documentUploadStatus = UploadStatus.ERROR)
+                        }
+                        sendEffect(SignupEffect.ShowError("Erro ao enviar documento"))
+                    }
+                )
+            }
 
             is SignupIntent.EnterPhone -> {
                 requestPhoneCode(activity = intent.activity, phone = intent.phone)
@@ -44,6 +95,42 @@ class SignupViewModel(
         }
     }
 
+    private fun createUser(next: SignupStep) {
+        viewModelScope.launch {
+            runCatching {
+                repository.createUser(state.value)
+            }.onSuccess {
+                updateState { it.copy(isCompleted = true, currentStep = next) }
+                sendEffect(SignupEffect.RegisterSuccess(state.value))
+            }.onFailure {
+                sendEffect(SignupEffect.ShowError("Erro ao criar motorista: ${it.message}"))
+                return@launch
+            }
+        }
+    }
+
+    private fun uploadFile(
+        file: PlatformFile,
+        onSuccess: (String) -> Unit,
+        onError: () -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val result = uploadRepository.uploadImage(
+                    file = file,
+                    remotePath = "drivers/temp/${file.name}"
+                )
+
+                result
+                    .onSuccess(onSuccess)
+                    .onFailure { onError() }
+
+            } catch (e: Exception) {
+                onError()
+            }
+        }
+    }
+
     private fun goToNextStep() {
         if (!state.value.canContinue) {
             sendEffect(SignupEffect.ShowError("Complete os campos obrigatórios"))
@@ -59,11 +146,12 @@ class SignupViewModel(
             SignupStep.Success -> SignupStep.Success
         }
 
-        updateAndValidate { it.copy(currentStep = next) }
-
         if (next == SignupStep.Success) {
-            sendEffect(SignupEffect.RegisterSuccess(state.value))
+            createUser(next)
+        } else {
+            updateAndValidate { it.copy(currentStep = next) }
         }
+
     }
 
     private fun goToPreviousStep() {
@@ -161,8 +249,8 @@ class SignupViewModel(
                 state.placa.isNotBlank() && state.insurance.isNotBlank() && state.validate.isNotBlank()
 
             SignupStep.Documents ->
-                state.profilePhotoPath != null &&
-                        state.idDocumentPath != null
+                state.profilePhotoUrl != null &&
+                        state.idDocumentUrl != null
 
             SignupStep.Verification ->
                 false // Aqui o NEXT não aparece, só o botão de "Verify"
