@@ -26,7 +26,7 @@ data class HomeDomainModel(
     val currentDestinationAddress: String? = null,
     val currentPickupAddress: String? = null,
     val currentPassengerNote: String? = null, // NOVO: para a nota
-    val currentFare: String = "R$ 0,00",     // NOVO: para o valor da corrida
+    val currentFare: String? = null,     // NOVO: para o valor da corrida
     val pickupCoordinate: Coordinate? = null, // NOVO: Coordenadas de pickup
     val destinationCoordinate: Coordinate? = null, // NOVO: Coordenadas de destino
     val targetCoordinate: Coordinate? = null, // NOVO: Coordenadas de destino

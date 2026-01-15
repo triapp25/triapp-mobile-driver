@@ -241,7 +241,7 @@ val domainModule = module {
 val presentationModule = module {
     viewModel { SignupViewModel(get(), get(), get()) }
     viewModel { LoginViewModel(get()) }
-    viewModel { HomeViewModel(get(), get(), get(), get(), get()) }
+    viewModel { HomeViewModel(get(), get(), get(), get()) }
     viewModel { ProfileViewModel(get(), get(), get(), get()) }
     viewModel { (args: RatingArgs) ->
         RatingViewModel(

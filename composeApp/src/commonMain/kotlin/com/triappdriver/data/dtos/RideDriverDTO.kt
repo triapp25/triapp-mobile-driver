@@ -53,3 +53,12 @@ data class RiderInfoFirebaseDTO(
     val name: String? = null, // NOVO CAMPO: Nome do passageiro
     val note: String? = null // NOVO CAMPO: Nota/instrução de embarque
 )
+
+fun LocationFirebaseDTO.Companion.fromMap(
+    map: Map<String, Any>
+): LocationFirebaseDTO =
+    LocationFirebaseDTO(
+        lat = map["lat"] as? Double ?: 0.0,
+        lng = map["lng"] as? Double ?: 0.0,
+        name = map["address"] as? String
+    )

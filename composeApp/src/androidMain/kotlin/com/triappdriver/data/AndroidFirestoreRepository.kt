@@ -7,55 +7,72 @@ import com.triappdriver.data.dtos.RideDriverDTO
 import com.triappdriver.data.dtos.RideRiderDTO
 import com.triappdriver.data.dtos.RiderFirebaseDTO
 import com.triappdriver.data.dtos.RiderInfoFirebaseDTO
+import com.triappdriver.data.dtos.fromMap
 import com.triappdriver.data.firestore.FirestoreRepository
 import com.triappdriver.data.firestore.ListenResult
+import com.triappdriver.domain.model.RideSnapshotDTO
 import com.triappdriver.utils.FirebaseAuthManager
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlin.collections.map
 
 class AndroidFirestoreRepository : FirestoreRepository {
-    val db = FirebaseFirestore.getInstance("triapp-dev-nosql")
+
+    private val db = FirebaseFirestore.getInstance("triapp-dev-nosql")
 
     override fun listenDocumentUntilDone(
         documentId: String
     ): Flow<ListenResult> {
+
         return db.collection("trip_status")
             .document(documentId)
             .snapshots()
             .map { snapshot ->
+
                 if (!snapshot.exists()) {
-                    throw IllegalStateException("Documento de status da viagem não encontrado no Firestore (ID: $documentId).")
+                    throw IllegalStateException(
+                        "Documento de status da viagem não encontrado (ID: $documentId)"
+                    )
                 }
 
-                val data: Map<String, Any?> = snapshot.data ?: emptyMap()
+                val data = snapshot.data ?: emptyMap()
 
-                val status = data["status"]?.toString() ?: "UNKNOWN"
+                val tripId = snapshot.id
+                val status = data["status"] as? String ?: "UNKNOWN"
 
-                val driver = try {
-                    snapshot.get("driver")?.let { raw ->
-                        val json = raw as Map<String, Any>
-                        RideDriverDTO.fromMap(json)
-                    }
-                } catch (e: Exception) {
-                    null
-                }
+                val riderMap = data["rider"] as? Map<String, Any>
+                    ?: error("Campo rider ausente")
 
-                val rider = try {
-                    snapshot.get("rider")?.let { raw ->
-                        val json = raw as Map<String, Any>
-                        RideRiderDTO.fromMap(json)
-                    }
-                } catch (e: Exception) {
-                    null
-                }
+                val driverMap = data["driver"] as? Map<String, Any>
 
-                ListenResult(driver, rider, status)
+                val pickupMap = data["pickup"] as? Map<String, Any>
+                    ?: error("Campo pickup ausente")
+
+                val dropoffMap = data["dropoff"] as? Map<String, Any>
+                    ?: error("Campo dropoff ausente")
+
+                val snapshotDTO = RideSnapshotDTO(
+                    tripId = tripId,
+                    status = status,
+
+                    rider = RideRiderDTO.fromMap(riderMap),
+                    driver = driverMap?.let { RideDriverDTO.fromMap(it) },
+
+                    pickup = LocationFirebaseDTO.fromMap(pickupMap),
+                    dropoff = LocationFirebaseDTO.fromMap(dropoffMap),
+
+                    fare = data["finalPrice"] as? String,
+                    etaMin = (data["etaMinutes"] as? Double)?.toString(),
+                    distance = (data["distanceEstimated"] as? Double)?.toString()
+                )
+
+                ListenResult(snapshotDTO)
             }
     }
 
-    override fun listenOnline(authManager: FirebaseAuthManager): Flow<RiderFirebaseDTO?> {
-        val db = FirebaseFirestore.getInstance("triapp-dev-nosql")
+    override fun listenOnline(
+        authManager: FirebaseAuthManager
+    ): Flow<RiderFirebaseDTO?> {
 
         val collectionRef = db.collection("drivers")
             .document(authManager.getCurrentUser()?.userId.orEmpty())
@@ -63,22 +80,19 @@ class AndroidFirestoreRepository : FirestoreRepository {
 
         return collectionRef.snapshots()
             .map { snapshot ->
-                // 1. Mapeia todos os documentos para RiderFirebaseDTO? (ou null em caso de erro/falha)
-                val mappedRides: List<RiderFirebaseDTO?> =
-                    snapshot.documents.map { documentSnapshot ->
+                snapshot.documents
+                    .mapNotNull { doc ->
                         try {
-                            mapDocumentToRideRequest(documentSnapshot.data ?: emptyMap())
+                            mapDocumentToRideRequest(doc.data ?: emptyMap())
                         } catch (e: Exception) {
-                            println("Erro ao mapear documento: $e")
                             null
                         }
                     }
-
-                // 2. Encontra o primeiro que não é nulo.
-                mappedRides.firstOrNull { it != null }
+                    .firstOrNull()
             }
     }
 }
+
 
 
 fun mapDocumentToRideRequest(data: Map<String, Any?>): RiderFirebaseDTO? {

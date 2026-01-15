@@ -56,7 +56,7 @@ class LocationForegroundService : Service() {
             locationSender.start()
         }
 
-        return START_STICKY
+        return START_NOT_STICKY
     }
 
     override fun onDestroy() {
@@ -66,6 +66,20 @@ class LocationForegroundService : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        stopEverything()
+        super.onTaskRemoved(rootIntent)
+    }
+
+    private fun stopEverything() {
+        geoLocationTracker.stopTracking()
+        serviceScope.cancel()
+
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
+    }
+
 }
 
 fun createLocationNotification(context: Context): Notification {

@@ -539,7 +539,6 @@ fun ActiveRideBottomPanel(step: HomeStep, viewModel: HomeViewModel) {
     val passengerName = uiState.currentRiderName.orEmpty()
     val pickupAddress = uiState.currentPickupAddress.orEmpty()
     val destinationAddress = uiState.currentDestinationAddress.orEmpty()
-    val fare = uiState.currentFare
     val passengerNote = uiState.currentPassengerNote
 
     // Cálculo de tempo e distância (vindos do Mapbox via ViewModel)
@@ -731,7 +730,7 @@ fun SimulatedMap(
         driverPosition?.let { coord ->
             MapViewComponent(
                 modifier = Modifier.fillMaxSize(),
-                coordinate = driverPosition,
+                coordinate = coord,
                 routePolyline = routePolyline,
                 riderPosition = riderPosition
             )
